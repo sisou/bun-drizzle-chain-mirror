@@ -1,0 +1,24 @@
+{
+	"name": "bun-drizzle-chain-mirror",
+	"module": "index.ts",
+	"type": "module",
+	"scripts": {
+		"fmt": "dprint fmt",
+		"migrate:generate": "drizzle-kit generate:sqlite --schema db/schema.ts",
+		"migrate:up": "bun run db/migrate.ts",
+		"migrate": "bun run migrate:generate && bun run migrate:up",
+		"seed:testnet": "bun run db/seed-testnet.ts",
+		"seed:mainnet": "bun run db/seed-mainnet.ts"
+	},
+	"devDependencies": {
+		"bun-types": "latest",
+		"dprint": "^0.42.5",
+		"drizzle-kit": "^0.20.4"
+	},
+	"peerDependencies": {
+		"typescript": "^5.0.0"
+	},
+	"dependencies": {
+		"drizzle-orm": "^0.29.0"
+	}
+}
