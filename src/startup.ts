@@ -1,4 +1,4 @@
-import { AccountInsert, accounts, BlockInsert, blocks, TransactionInsert, transactions } from "../db/schema";
+import { AccountInsert, BlockInsert, TransactionInsert, accounts, blocks, transactions } from "../db/schema";
 import { db } from "./database";
 import { getAccount, getBlockByNumber } from "./rpc";
 
@@ -67,7 +67,7 @@ export async function writeBlocks(fromBlock: number, toBlock: number) {
 				address: tx.toAddress,
 				type: tx.toType,
 				balance: 0,
-				creation_data: tx.toType !== 0 ? Buffer.from(tx.data!, "hex") : undefined,
+				creation_data: tx.toType !== 0 && tx.data ? Buffer.from(tx.data, "hex") : undefined,
 				first_seen: block.number,
 				last_sent: undefined,
 				last_received: block.number,
@@ -79,6 +79,7 @@ export async function writeBlocks(fromBlock: number, toBlock: number) {
 		await Promise.all(
 			Array.from(accountEntries.keys()).map(async (address) => {
 				const account = await getAccount(address);
+				// biome-ignore lint/style/noNonNullAssertion: iteration is over keys of accountEntries
 				accountEntries.get(address)!.balance = account.balance;
 			}),
 		);
