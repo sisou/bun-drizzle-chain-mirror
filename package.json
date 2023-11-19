@@ -5,7 +5,7 @@
 	"scripts": {
 		"fmt": "dprint fmt",
 		"lint": "biome lint index.ts src/** db/**",
-		"migrate:generate": "drizzle-kit generate:sqlite --schema db/schema.ts",
+		"migrate:generate": "drizzle-kit generate:pg --schema db/schema.ts",
 		"migrate:up": "bun run db/migrate.ts",
 		"migrate": "bun run migrate:generate && bun run migrate:up",
 		"seed:testnet": "bun run db/seed-testnet.ts",
@@ -21,6 +21,7 @@
 		"typescript": "^5.0.0"
 	},
 	"dependencies": {
-		"drizzle-orm": "^0.29.0"
+		"drizzle-orm": "^0.29.0",
+		"postgres": "^3.4.3"
 	}
 }

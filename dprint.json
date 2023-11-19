@@ -9,7 +9,7 @@
 	},
 	"excludes": [
 		"**/node_modules",
-		"**/*-lock.json"
+		"./drizzle"
 	],
 	"plugins": [
 		"https://plugins.dprint.dev/typescript-0.88.3.wasm",

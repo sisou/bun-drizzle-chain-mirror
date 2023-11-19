@@ -1,16 +1,40 @@
-import { blob, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+	bigint,
+	char,
+	customType,
+	date,
+	index,
+	integer,
+	pgTable,
+	real,
+	smallint,
+	uniqueIndex,
+} from "drizzle-orm/pg-core";
 
-export const blocks = sqliteTable("blocks", {
+const bytea = customType<{ data: string; notNull: false; default: false }>({
+	dataType() {
+		return "bytea";
+	},
+	toDriver(val) {
+		return Buffer.from(val.startsWith("0x") ? val.slice(2) : val, "hex");
+	},
+	fromDriver(val) {
+		if (val instanceof Buffer) return val.toString("hex");
+		throw new Error(`Expected Buffer, got ${typeof val}`);
+	},
+});
+
+export const blocks = pgTable("blocks", {
 	height: integer("height").primaryKey(),
-	timestamp_ms: integer("timestamp_ms", { mode: "timestamp_ms" }).notNull(),
-	hash: blob("hash", { mode: "buffer" }).notNull(),
-	creator_address: text("creator_address", { length: 44 }).notNull(),
+	date: date("timestamp_ms", { mode: "date" }).notNull(),
+	hash: bytea("hash").notNull(),
+	creator_address: char("creator_address", { length: 44 }).notNull(),
 	transaction_count: integer("transaction_count").notNull(),
-	value: integer("value").notNull(),
-	fees: integer("fees").notNull(),
+	value: bigint("value", { mode: "number" }).notNull(),
+	fees: bigint("fees", { mode: "number" }).notNull(),
 	size: integer("size").notNull(),
-	difficulty: integer("difficulty").notNull(),
-	extra_data: blob("extra_data", { mode: "buffer" }),
+	difficulty: real("difficulty").notNull(),
+	extra_data: bytea("extra_data"),
 }, (table) => ({
 	block_hash_idx: uniqueIndex("block_hash_idx").on(table.hash),
 	creator_address_idx: index("creator_address_idx").on(table.creator_address),
@@ -18,21 +42,21 @@ export const blocks = sqliteTable("blocks", {
 export type Block = typeof blocks.$inferSelect;
 export type BlockInsert = typeof blocks.$inferInsert;
 
-export const transactions = sqliteTable("transactions", {
-	hash: blob("hash", { mode: "buffer" }).primaryKey(),
+export const transactions = pgTable("transactions", {
+	hash: bytea("hash").primaryKey(),
 	block_height: integer("block_height").notNull().references(() => blocks.height, { onDelete: "cascade" }),
-	timestamp_ms: integer("timestamp_ms", { mode: "timestamp_ms" }).notNull(),
-	sender_address: text("sender_address", { length: 44 }).notNull().references(() => accounts.address),
-	sender_type: integer("sender_type").notNull(),
-	sender_data: blob("sender_data", { mode: "buffer" }),
-	recipient_address: text("recipient_address", { length: 44 }).notNull().references(() => accounts.address),
-	recipient_type: integer("recipient_type").notNull(),
-	recipient_data: blob("recipient_data", { mode: "buffer" }),
-	value: integer("value").notNull(),
-	fee: integer("fee").notNull(),
+	timestamp_ms: date("timestamp_ms", { mode: "date" }).notNull(),
+	sender_address: char("sender_address", { length: 44 }).notNull().references(() => accounts.address),
+	sender_type: smallint("sender_type").notNull(),
+	sender_data: bytea("sender_data"),
+	recipient_address: char("recipient_address", { length: 44 }).notNull().references(() => accounts.address),
+	recipient_type: smallint("recipient_type").notNull(),
+	recipient_data: bytea("recipient_data"),
+	value: bigint("value", { mode: "number" }).notNull(),
+	fee: bigint("fee", { mode: "number" }).notNull(),
 	validity_start_height: integer("validity_start_height").notNull(),
-	flags: integer("flags").notNull(),
-	proof: blob("proof", { mode: "buffer" }),
+	flags: smallint("flags").notNull(),
+	proof: bytea("proof"),
 }, (table) => ({
 	block_height_idx: index("block_height_idx").on(table.block_height),
 	timestamp_ms_idx: index("timestamp_ms_idx").on(table.timestamp_ms),
@@ -42,12 +66,12 @@ export const transactions = sqliteTable("transactions", {
 export type Transaction = typeof transactions.$inferSelect;
 export type TransactionInsert = typeof transactions.$inferInsert;
 
-export const accounts = sqliteTable("accounts", {
-	address: text("address", { length: 44 }).primaryKey(),
+export const accounts = pgTable("accounts", {
+	address: char("address", { length: 44 }).primaryKey(),
 	type: integer("type").notNull(),
-	balance: integer("balance").notNull(),
-	creation_data: blob("creation_data", { mode: "buffer" }), // Only for contracts
-	first_seen: integer("first_seen").notNull().references(() => blocks.height, { onDelete: "cascade" }),
+	balance: bigint("balance", { mode: "number" }).notNull(),
+	creation_data: bytea("creation_data"), // Only for contracts
+	first_seen: integer("first_seen").references(() => blocks.height, { onDelete: "cascade" }),
 	last_sent: integer("last_sent").references(() => blocks.height),
 	last_received: integer("last_received").references(() => blocks.height),
 }, (table) => ({

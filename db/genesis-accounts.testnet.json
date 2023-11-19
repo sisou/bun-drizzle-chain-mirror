@@ -4,7 +4,7 @@
 		"type": 0,
 		"balance": 2432579021039,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -13,7 +13,7 @@
 		"type": 0,
 		"balance": 2059042701170,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -22,7 +22,7 @@
 		"type": 1,
 		"balance": 3727772232439,
 		"creation_data": "b5d050775729289baf93eb7519fa5e5174ca9508000000010000168000000363f08a2af7",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -31,7 +31,7 @@
 		"type": 1,
 		"balance": 4287616917096,
 		"creation_data": "d9fe7a95fece5d2557ffea4f3cc87513f57b17730000000100001680000003e649e21e68",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -40,7 +40,7 @@
 		"type": 0,
 		"balance": 2249704968041,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -49,7 +49,7 @@
 		"type": 1,
 		"balance": 2600867916348,
 		"creation_data": "589a896e740c1d336b0888a542d7c7fb4fe5f11e0000000100000b4000000064ed4d270a",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -58,7 +58,7 @@
 		"type": 1,
 		"balance": 1052616445724,
 		"creation_data": "9abec8825ff904e19608ffb95db30e4f11d3f7a30000000100001680000000f514d44f1c",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -67,7 +67,7 @@
 		"type": 1,
 		"balance": 1493894334825,
 		"creation_data": "21556425e540e081228f2a42508a4b7896d60ec30000000100000b4000000039f881c192",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -76,7 +76,7 @@
 		"type": 1,
 		"balance": 2409805980624,
 		"creation_data": "9f358887df0c1c32985a110490ed7e8692eb55ef00000001000016800000023113a123d0",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -85,7 +85,7 @@
 		"type": 0,
 		"balance": 1484568907819,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -94,7 +94,7 @@
 		"type": 1,
 		"balance": 2541501628349,
 		"creation_data": "28c4049b6244aaeaaa1ecf6cc6f10f0923e53b5400000001000016800000024fbd4d3fbd",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -103,7 +103,7 @@
 		"type": 1,
 		"balance": 4123178425540,
 		"creation_data": "e03d50ee5db2e8bc548eb5cb3a204e848a89fc5a0000000100001680000003c00095dcc4",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -112,7 +112,7 @@
 		"type": 1,
 		"balance": 1561750130612,
 		"creation_data": "d59c8cee3ca46e0d39413acc59a3bcb7dcaf828f0000000100000b400000003c9a97f7f4",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -121,7 +121,7 @@
 		"type": 1,
 		"balance": 2701922179786,
 		"creation_data": "1b7fedd3579b9595805a4880cecfd541403887d10000000100000b4000000068d92f6f22",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -130,7 +130,7 @@
 		"type": 0,
 		"balance": 1095525965299,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -139,7 +139,7 @@
 		"type": 1,
 		"balance": 2084602182210,
 		"creation_data": "669f5db01fc4d4ec10984e0614775b02144bee9f0000000100000b4000000050e4a97f0b",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -148,7 +148,7 @@
 		"type": 0,
 		"balance": 563314067541,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -157,7 +157,7 @@
 		"type": 1,
 		"balance": 580507883246,
 		"creation_data": "01c3a64cf4841d1d112d7f77f2798818ddd0cc1000000001000016800000008728f756ee",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -166,7 +166,7 @@
 		"type": 0,
 		"balance": 766404470740,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -175,7 +175,7 @@
 		"type": 1,
 		"balance": 3635953218138,
 		"creation_data": "9e82fb79b9020704f08631c1ea31093e756c64660000000100000b400000008d17f3330f",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -184,7 +184,7 @@
 		"type": 0,
 		"balance": 4319475971896,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -193,7 +193,7 @@
 		"type": 1,
 		"balance": 716011267605,
 		"creation_data": "0c4b9473e7917ffd31b3f3baf6ab5e163adf409e0000000100001680000000a6b598e615",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -202,7 +202,7 @@
 		"type": 0,
 		"balance": 812181106583,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -211,7 +211,7 @@
 		"type": 0,
 		"balance": 784922111861,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -220,7 +220,7 @@
 		"type": 0,
 		"balance": 4392460698591,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -229,7 +229,7 @@
 		"type": 1,
 		"balance": 2109942846560,
 		"creation_data": "0545b7130501f09598e23f08f5b0d6e17af627b60000000100000b4000000051e0662366",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -238,7 +238,7 @@
 		"type": 1,
 		"balance": 812759836780,
 		"creation_data": "45fac3473a9978f44b5d4e439ced7ee20eb350f30000000100000b400000001f8a0b26bd",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -247,7 +247,7 @@
 		"type": 1,
 		"balance": 771997636399,
 		"creation_data": "c0462446736925009739616eb41899f6571ad9570000000100000b400000001df51b83de",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -256,7 +256,7 @@
 		"type": 1,
 		"balance": 1629650178664,
 		"creation_data": "91ba3432de13ffaccfb2b96463998af34e9ed39e00000001000016800000017b6eb85268",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -265,7 +265,7 @@
 		"type": 0,
 		"balance": 3467820217916,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -274,7 +274,7 @@
 		"type": 1,
 		"balance": 1878710623401,
 		"creation_data": "3294e45746bf250971286a33693c063464f520320000000100001680000001b56be11ca9",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -283,7 +283,7 @@
 		"type": 1,
 		"balance": 15223778947,
 		"creation_data": "339d50b087fd68473ff75a7028665258b901b7670000000100001680000000038b686e83",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -292,7 +292,7 @@
 		"type": 1,
 		"balance": 1493465786751,
 		"creation_data": "534dd811cc4fadc948d76d950ef1e3b46c87791b0000000100000b4000000039f43fe6eb",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -301,7 +301,7 @@
 		"type": 1,
 		"balance": 644020608794,
 		"creation_data": "73d588484a6f47030e19b15cd17ea37ead2868e40000000100000b4000000018fdc51a85",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -310,7 +310,7 @@
 		"type": 1,
 		"balance": 3122109673098,
 		"creation_data": "0907dc5f74db022d3c25bb0e769c3412c1ab42000000000100001680000002d6ec3cee8a",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -319,7 +319,7 @@
 		"type": 1,
 		"balance": 1385408071911,
 		"creation_data": "e3f26a269a13a9c5689f6bb53c5b1fe9bafcc45a00000001000016800000014290c188e7",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -328,7 +328,7 @@
 		"type": 0,
 		"balance": 3023964565540,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -337,7 +337,7 @@
 		"type": 1,
 		"balance": 1330070127604,
 		"creation_data": "9d1d89d0d5a0b042c8629ac41cbc1903bcc4d6760000000100000b40000000339d0f40a9",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -346,7 +346,7 @@
 		"type": 1,
 		"balance": 4191119546739,
 		"creation_data": "3667d7971e116fbacf82f6e51743c952099ae6ea0000000100000b40000000a2a3082ee9",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -355,7 +355,7 @@
 		"type": 0,
 		"balance": 3491376421169,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -364,7 +364,7 @@
 		"type": 0,
 		"balance": 3488973125022,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -373,7 +373,7 @@
 		"type": 1,
 		"balance": 988216818621,
 		"creation_data": "98d156bf52ef5d5351ea71466015bf19fd2b5e370000000100000b4000000026590d54a0",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -382,7 +382,7 @@
 		"type": 1,
 		"balance": 3362182800583,
 		"creation_data": "9d3cf914bfd480fdd56bf7e94084d260c0f60dd900000001000016800000030ed1b624c7",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -391,7 +391,7 @@
 		"type": 1,
 		"balance": 296719220424,
 		"creation_data": "7c5981ba83e3987c32ec36fec157eef0af9f5e7900000001000016800000004515d7fec8",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -400,7 +400,7 @@
 		"type": 0,
 		"balance": 2111798915845,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -409,7 +409,7 @@
 		"type": 1,
 		"balance": 3808024313879,
 		"creation_data": "412447441a9aba967eadb963c3f25591c0a6b5310000000100000b4000000093c552a004",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -418,7 +418,7 @@
 		"type": 1,
 		"balance": 2628271742638,
 		"creation_data": "547f5b8de16c5446537ed64642aac22417242a68000000010000168000000263f1341eae",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -427,7 +427,7 @@
 		"type": 0,
 		"balance": 2111934988350,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -436,7 +436,7 @@
 		"type": 0,
 		"balance": 1138461655102,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -445,7 +445,7 @@
 		"type": 1,
 		"balance": 4373082214930,
 		"creation_data": "d430319fec839164377ed1ea7d26889ec563e9200000000100000b40000000a9b2ab2dae",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -454,7 +454,7 @@
 		"type": 1,
 		"balance": 1888793741823,
 		"creation_data": "4ed87748fe96b49f5ee1c1ff3f3a5db34a2da69d0000000100000b40000000494b7ae1ab",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -463,7 +463,7 @@
 		"type": 1,
 		"balance": 2515379268724,
 		"creation_data": "739a86524b04334367254efd03e4e59bc07bf0720000000100000b40000000619c0c4769",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -472,7 +472,7 @@
 		"type": 0,
 		"balance": 4343171994192,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -481,7 +481,7 @@
 		"type": 1,
 		"balance": 1293150355825,
 		"creation_data": "2c41d119e465797e50260add8169f0056f64f81400000001000016800000012d15c48171",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -490,7 +490,7 @@
 		"type": 1,
 		"balance": 4090510186021,
 		"creation_data": "3af84cd39abdfca33d73dc8ba5c96a3fc15469a80000000100000b400000009ebb915907",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -499,7 +499,7 @@
 		"type": 0,
 		"balance": 4387636376350,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -508,7 +508,7 @@
 		"type": 1,
 		"balance": 313449243229,
 		"creation_data": "e0e2afdfa1c8aae2b79f9b5508f7680bf678645c000000010000168000000048fb07e25d",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -517,7 +517,7 @@
 		"type": 1,
 		"balance": 594472279574,
 		"creation_data": "ca2cbdf95ba266d9a4d7bc6ad26723ee8ce4fb3400000001000016800000008a694f1e16",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -526,7 +526,7 @@
 		"type": 0,
 		"balance": 3961365288178,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -535,7 +535,7 @@
 		"type": 0,
 		"balance": 4464964986979,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -544,7 +544,7 @@
 		"type": 0,
 		"balance": 216483783856,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -553,7 +553,7 @@
 		"type": 1,
 		"balance": 3898393884198,
 		"creation_data": "9a3bf3e4291514b236c7368d1a79bd9637c4a59600000001000016800000038baa61f626",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -562,7 +562,7 @@
 		"type": 1,
 		"balance": 3105716891892,
 		"creation_data": "b8526257821c8ade3146cee18ef845d4ec211a5e0000000100000b400000007884867d7e",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -571,7 +571,7 @@
 		"type": 0,
 		"balance": 2262056735808,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -580,7 +580,7 @@
 		"type": 1,
 		"balance": 4399860844880,
 		"creation_data": "255a8f5a69e301c976913b5e87b2ec3ed35477700000000100000b40000000aabcb0c18e",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -589,7 +589,7 @@
 		"type": 0,
 		"balance": 140164083021,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -598,7 +598,7 @@
 		"type": 1,
 		"balance": 635356125892,
 		"creation_data": "c72aabfed0364fcf42d49d4433a05773234d8bb8000000010000168000000093ee2d1ac4",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -607,7 +607,7 @@
 		"type": 1,
 		"balance": 4229683560486,
 		"creation_data": "6d6f639854c2cec3bd997e7ba93a786840a2b4a30000000100001680000003d8ccc94026",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -616,7 +616,7 @@
 		"type": 0,
 		"balance": 964155880727,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -625,7 +625,7 @@
 		"type": 1,
 		"balance": 928670773260,
 		"creation_data": "2cd90b492eb21b623963d31c076ea4811c5fe24e0000000100000b40000000240983e802",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -634,7 +634,7 @@
 		"type": 0,
 		"balance": 3146683895602,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -643,7 +643,7 @@
 		"type": 1,
 		"balance": 1664632822124,
 		"creation_data": "25ab61f886646b2b55d02277e658d546c21a4a890000000100000b400000004098a42ee8",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -652,7 +652,7 @@
 		"type": 1,
 		"balance": 2552067537953,
 		"creation_data": "c8b507458a67a1dcbd953aacaca74dec5d74e92200000001000016800000025233143c21",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -661,7 +661,7 @@
 		"type": 1,
 		"balance": 2832810445537,
 		"creation_data": "37be58533b587e812e29f0d952bddac13e7fe20000000001000016800000029390a90ae1",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -670,7 +670,7 @@
 		"type": 1,
 		"balance": 2717891971310,
 		"creation_data": "8f901b5a3b82f23083de193249d0f7bc2b2a048f0000000100000b400000006977d4b6d3",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -679,7 +679,7 @@
 		"type": 0,
 		"balance": 1929555213340,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -688,7 +688,7 @@
 		"type": 0,
 		"balance": 168147476298,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -697,7 +697,7 @@
 		"type": 1,
 		"balance": 228538014846,
 		"creation_data": "300ad53bcb1a2b1cac54fd0c9c92a101ff43528800000001000016800000003535ed5c7e",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -706,7 +706,7 @@
 		"type": 1,
 		"balance": 533933363077,
 		"creation_data": "e885535e8a6e3b3f5007ebd976abda32e11000600000000100000b4000000014b826c297",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -715,7 +715,7 @@
 		"type": 1,
 		"balance": 1829485916992,
 		"creation_data": "34ccf4577cebaa6981f1ae2cc18f7ec4205395e80000000100000b4000000046fe4f488b",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -724,7 +724,7 @@
 		"type": 0,
 		"balance": 2810268788196,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -733,7 +733,7 @@
 		"type": 0,
 		"balance": 1732170467706,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -742,7 +742,7 @@
 		"type": 1,
 		"balance": 1664291368090,
 		"creation_data": "e5073cdd38a619176ea82417fd8acbb92cd06e930000000100001680000001837f7eec9a",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -751,7 +751,7 @@
 		"type": 0,
 		"balance": 2863203473613,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -760,7 +760,7 @@
 		"type": 1,
 		"balance": 2692094713815,
 		"creation_data": "cb03ec8bc046646f822b2d67c36fb139b349343a0000000100000b4000000068778ee54f",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -769,7 +769,7 @@
 		"type": 1,
 		"balance": 1253117466374,
 		"creation_data": "f3c3bfcb4cbe9e378dca803258bf13c8fa8d6a07000000010000168000000123c39f1706",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -778,7 +778,7 @@
 		"type": 1,
 		"balance": 1429019297375,
 		"creation_data": "04192e7d4d74be26a76c361a9c2f0065ee9ce62d00000001000016800000014cb830065f",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -787,7 +787,7 @@
 		"type": 1,
 		"balance": 3558067895307,
 		"creation_data": "ef64d8521ec56103122131c9047452688d467ac80000000100000b400000008a123a94ad",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -796,7 +796,7 @@
 		"type": 0,
 		"balance": 3023711311636,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -805,7 +805,7 @@
 		"type": 1,
 		"balance": 972521299884,
 		"creation_data": "f9664914cb9e447586e527fb1294b08e87a8a5090000000100000b4000000025bd218ff2",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -814,7 +814,7 @@
 		"type": 1,
 		"balance": 2959375979628,
 		"creation_data": "fb7946a4718f6c2a27e2b10bf6701e38195145660000000100001680000002b1088dd46c",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -823,7 +823,7 @@
 		"type": 1,
 		"balance": 3067276621235,
 		"creation_data": "a483648b0b9b8bebb9b52667150e9dcb566e6cc60000000100000b400000007706a7d39e",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -832,7 +832,7 @@
 		"type": 1,
 		"balance": 383487423764,
 		"creation_data": "a122721dc8fbd234752e83fece129198e02d42ab00000001000016800000005949a1b514",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -841,7 +841,7 @@
 		"type": 0,
 		"balance": 1606369293941,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -850,7 +850,7 @@
 		"type": 1,
 		"balance": 4323400194170,
 		"creation_data": "b3ce50fbf10c8b16ab0d68edec81b2bf6c96c4e50000000100000b40000000a7c51f4415",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -859,7 +859,7 @@
 		"type": 1,
 		"balance": 3657534003052,
 		"creation_data": "0aeab801dc726b37dcf4c84a06a106cf558629310000000100001680000003539603d76c",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -868,7 +868,7 @@
 		"type": 0,
 		"balance": 3009669458576,
 		"creation_data": null,
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -877,7 +877,7 @@
 		"type": 1,
 		"balance": 1774931711709,
 		"creation_data": "e9567a308ae0d0c4cb7a517b4d4454102e76530200000001000016800000019d422c96dd",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -886,7 +886,7 @@
 		"type": 1,
 		"balance": 1166024346011,
 		"creation_data": "8b4ec5a3b2d0fd583024a08c963da6d8a0725b7b00000001000016800000010f7c77899b",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	},
@@ -895,7 +895,7 @@
 		"type": 1,
 		"balance": 33662795495135,
 		"creation_data": "9ac94a1a46736363a20b8e52074ca76981cc43390000000100000b400000051a49d3f3d0",
-		"first_seen": 0,
+		"first_seen": null,
 		"last_sent": null,
 		"last_received": null
 	}

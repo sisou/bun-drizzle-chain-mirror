@@ -1,6 +1,9 @@
-import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
-console.log("Opening database", process.env.DATABASE_URL || "/tmp/sqlite.db");
-export const sqlite = new Database(process.env.DATABASE_URL || "/tmp/sqlite.db");
-export const db = drizzle(sqlite);
+const url = process.env.DATABASE_POOLER_URL;
+if (!url) throw new Error("DATABASE_POOLER_URL environment variable is not set");
+
+console.log("Opening PostgreSQL database");
+export const pg = postgres(url);
+export const db = drizzle(pg);

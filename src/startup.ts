@@ -1,4 +1,4 @@
-import { AccountInsert, BlockInsert, TransactionInsert, accounts, blocks, transactions } from "../db/schema";
+import { AccountInsert, accounts, BlockInsert, blocks, TransactionInsert, transactions } from "../db/schema";
 import { db } from "./database";
 import { getAccount, getBlockByNumber } from "./rpc";
 
@@ -17,15 +17,15 @@ export async function writeBlocks(fromBlock: number, toBlock: number) {
 
 		const blockEntry: BlockInsert = {
 			height: block.number,
-			timestamp_ms: new Date(block.timestamp * 1e3),
-			hash: Buffer.from(block.hash, "hex"),
+			date: new Date(block.timestamp * 1e3),
+			hash: block.hash,
 			creator_address: block.minerAddress,
 			transaction_count: block.transactions.length,
 			value,
 			fees,
 			size: block.size,
 			difficulty: block.difficulty,
-			extra_data: Buffer.from(block.extraData, "hex"),
+			extra_data: block.extraData,
 		};
 		accountEntries.set(block.minerAddress, {
 			address: block.minerAddress,
@@ -40,17 +40,17 @@ export async function writeBlocks(fromBlock: number, toBlock: number) {
 		const txEntries = block.transactions.map((tx) => {
 			const txEntry: TransactionInsert = {
 				timestamp_ms: new Date(tx.timestamp * 1e3),
-				hash: Buffer.from(tx.hash, "hex"),
+				hash: tx.hash,
 				block_height: block.number,
 				sender_address: tx.fromAddress,
 				sender_type: tx.fromType,
 				sender_data: undefined,
 				recipient_address: tx.toAddress,
 				recipient_type: tx.toType,
-				recipient_data: tx.data ? Buffer.from(tx.data, "hex") : null,
+				recipient_data: tx.data,
 				value: tx.value,
 				fee: tx.fee,
-				proof: tx.proof ? Buffer.from(tx.proof, "hex") : null,
+				proof: tx.proof,
 				flags: tx.flags,
 				validity_start_height: tx.validityStartHeight,
 			};
@@ -67,7 +67,7 @@ export async function writeBlocks(fromBlock: number, toBlock: number) {
 				address: tx.toAddress,
 				type: tx.toType,
 				balance: 0,
-				creation_data: tx.toType !== 0 && tx.data ? Buffer.from(tx.data, "hex") : undefined,
+				creation_data: tx.toType !== 0 ? tx.data : undefined,
 				first_seen: block.number,
 				last_sent: undefined,
 				last_received: block.number,
