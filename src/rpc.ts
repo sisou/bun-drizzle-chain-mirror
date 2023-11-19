@@ -104,6 +104,7 @@ async function rpc<Type>(method: string, params: (string | number | boolean)[] =
 		: undefined;
 
 	const request_id = ++rpc_request_id;
+	if (rpc_request_id >= Number.MAX_SAFE_INTEGER) rpc_request_id = 0;
 
 	const response = await fetch(rpc_url, {
 		method: "POST",
