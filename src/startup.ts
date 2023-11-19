@@ -91,8 +91,7 @@ export async function writeBlocks(fromBlock: number, toBlock: number) {
 		await db.transaction(async (trx) => {
 			await trx.insert(blocks).values(blockEntry);
 
-			if (txEntries.length) await trx.insert(transactions).values(txEntries);
-
+			// Accounts must be entered before transactions, so that new recipients are already in the database
 			await Promise.all(
 				Array.from(accountEntries.values())
 					.map((account) =>
@@ -110,6 +109,9 @@ export async function writeBlocks(fromBlock: number, toBlock: number) {
 							})
 					),
 			);
+
+			// Transactions must be entered after accounts, so that new recipients are already in the database
+			if (txEntries.length) await trx.insert(transactions).values(txEntries);
 		});
 	}
 }
