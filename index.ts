@@ -2,7 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { blocks } from "./db/schema";
 import { db } from "./src/database";
 import { blockNumber, getBlockByNumber } from "./src/rpc";
-import { writeBlocks } from "./src/startup";
+import { writeBlocks } from "./src/writer";
 
 // Step 1: Catch up to the chain
 
