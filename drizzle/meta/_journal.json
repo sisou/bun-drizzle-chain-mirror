@@ -8,6 +8,20 @@
       "when": 1700422350857,
       "tag": "0000_moaning_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1700513674845,
+      "tag": "0001_purple_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1700513991560,
+      "tag": "0002_flowery_ted_forrester",
+      "breakpoints": true
     }
   ]
 }

@@ -72,8 +72,8 @@ export const accounts = pgTable("accounts", {
 	balance: bigint("balance", { mode: "number" }).notNull(),
 	creation_data: bytea("creation_data"), // Only for contracts
 	first_seen: integer("first_seen").references(() => blocks.height, { onDelete: "cascade" }),
-	last_sent: integer("last_sent").references(() => blocks.height),
-	last_received: integer("last_received").references(() => blocks.height),
+	last_sent: integer("last_sent").references(() => blocks.height, { onDelete: "set null" }),
+	last_received: integer("last_received").references(() => blocks.height, { onDelete: "set null" }),
 }, (table) => ({
 	first_seen_idx: index("first_seen_idx").on(table.first_seen),
 	last_sent_idx: index("last_sent_idx").on(table.last_sent),

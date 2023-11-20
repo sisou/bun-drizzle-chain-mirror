@@ -1,8 +1,31 @@
+import { and, desc, eq, gte, lt, or } from "drizzle-orm";
 import { AccountInsert, accounts, BlockInsert, blocks, TransactionInsert, transactions } from "../db/schema";
 import { db } from "./database";
 import { getAccount, getBlockByNumber } from "./rpc";
 
-export async function writeBlocks(fromBlock: number, toBlock: number) {
+export async function writeBlocks(fromBlock: number, toBlock: number, overwrite = false) {
+	let affectedAddresses = new Set<string>();
+	if (overwrite) {
+		console.log(`Deleting blocks from #${fromBlock}`);
+		// Fetch all accounts that will be affected
+		affectedAddresses = new Set(
+			await db.select({ address: accounts.address }).from(accounts).where(
+				and(
+					// Accounts with a first-seen height higher or equal to the from block will be deleted
+					lt(accounts.first_seen, fromBlock),
+					or(
+						// The last_seen and last_received fields will be set to NULL by the deletion of the block
+						gte(accounts.last_sent, fromBlock),
+						gte(accounts.last_received, fromBlock),
+					),
+				),
+			).then(res => res.map(row => row.address)),
+		);
+
+		// Through relational onDelete "cascade" rules, deleting the block deletes all its transactions and first-seen accounts
+		await db.delete(blocks).where(gte(blocks.height, fromBlock));
+	}
+
 	for (let i = fromBlock; i <= toBlock; i++) {
 		// console.info(`Fetching block #${i}`);
 		const block = await getBlockByNumber(i, true);
@@ -83,6 +106,53 @@ export async function writeBlocks(fromBlock: number, toBlock: number) {
 				accountEntries.get(address)!.balance = account.balance;
 			}),
 		);
+
+		// Fill in the last_sent and last_received fields for affectedAddresses
+		if (affectedAddresses.size) {
+			await Promise.all(
+				Array.from(affectedAddresses.values()).map(async (address) => {
+					const entry = accountEntries.get(address)
+						|| await db.select().from(accounts).where(eq(accounts.address, address)).limit(1).then(res => res[0]);
+					if (!entry) {
+						console.error(`Fork-affected account ${address} not found!!!`);
+						return;
+					}
+					if (!accountEntries.has(address)) {
+						// Update balance for accounts that are not in the fork
+						const account = await getAccount(address);
+						accountEntries.set(address, {
+							...entry,
+							balance: account.balance,
+						});
+					}
+					if (!entry.last_sent) {
+						const lastSent = await db.select({ block_height: transactions.block_height }).from(transactions).where(
+							eq(transactions.sender_address, entry.address),
+						).orderBy(desc(transactions.block_height)).limit(1).then(res => res.at(0)?.block_height);
+
+						// biome-ignore lint/style/noNonNullAssertion: an account entry was either found or created above
+						accountEntries.get(entry.address)!.last_sent = lastSent;
+					}
+					if (!entry.last_received) {
+						const [lastReceived, lastMined] = await Promise.all([
+							db.select({ block_height: transactions.block_height }).from(transactions).where(
+								eq(transactions.recipient_address, entry.address),
+							).orderBy(desc(transactions.block_height)).limit(1).then(res => res.at(0)?.block_height),
+							db.select({ height: blocks.height }).from(blocks).where(eq(blocks.creator_address, address)).orderBy(
+								desc(blocks.height),
+							).limit(1).then(res => res.at(0)?.height),
+						]);
+
+						const laterOfTheTwo = Math.max(lastReceived || 0, lastMined || 0);
+
+						// biome-ignore lint/style/noNonNullAssertion: an account entry was either found or created above
+						accountEntries.get(entry.address)!.last_received = laterOfTheTwo > 0 ? laterOfTheTwo : undefined;
+					}
+					// Delete address from affectedAddresses so that it is not processed again
+					affectedAddresses.delete(address);
+				}),
+			);
+		}
 
 		console.log(
 			`For block #${i}, generated 1 block, ${txEntries.length} transactions, ${accountEntries.size} accounts`,
