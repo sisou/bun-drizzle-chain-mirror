@@ -57,8 +57,12 @@ async function pollChain() {
 	dbHeight = currentHeight;
 }
 
-// Wait 1s _between_ polls
-setTimeout(async () => {
+async function poll() {
 	await pollChain();
-	setTimeout(pollChain, 1e3);
-}, 1e3);
+	// Call itself again after 1s (waiting 1s _between_ polls)
+	setTimeout(poll, 1e3);
+}
+
+// Kick off polling
+console.log('Polling chain for new blocks...')
+poll();
