@@ -1,6 +1,17 @@
+import { ValidationUtils } from "@nimiq/utils";
 import { and, desc, eq, gte, lt, or } from "drizzle-orm";
-import { AccountInsert, accounts, BlockInsert, blocks, TransactionInsert, transactions } from "../db/schema";
+import {
+	AccountInsert,
+	accounts,
+	BlockInsert,
+	blocks,
+	TransactionInsert,
+	transactions,
+	ValidatorPreregistrationInsert,
+	validatorPreregistrations,
+} from "../db/schema";
 import { db } from "./database";
+import { REGISTRATION_END_HEIGHT, REGISTRATION_START_HEIGHT, VALIDATOR_DEPOSIT } from "./lib/prestaking";
 import { getAccount, getBlockByNumber } from "./rpc";
 
 export async function writeBlocks(fromBlock: number, toBlock: number, overwrite = false) {
@@ -60,6 +71,8 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 			last_received: block.number,
 		});
 
+		const validatorPreregistrationEntries = new Map<string, ValidatorPreregistrationInsert>();
+
 		const txEntries = block.transactions.map((tx) => {
 			const txEntry: TransactionInsert = {
 				timestamp_ms: new Date(tx.timestamp * 1e3),
@@ -95,6 +108,55 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 				last_sent: undefined,
 				last_received: block.number,
 			});
+
+			if (
+				block.number >= REGISTRATION_START_HEIGHT && block.number <= REGISTRATION_END_HEIGHT
+				&& tx.toAddress === "NQ07 0000 0000 0000 0000 0000 0000 0000 0000"
+			) {
+				if (tx.data?.length === 128 && ["01", "02", "03", "04", "05", "06"].includes(tx.data.substring(0, 2))) {
+					// Handle validator pre-registration transaction
+					const validatorAddress = tx.fromAddress;
+					const registration = validatorPreregistrationEntries.get(validatorAddress);
+					validatorPreregistrationEntries.set(validatorAddress, {
+						address: validatorAddress,
+						transaction_01: tx.data.substring(0, 2) === "01" ? tx.hash : registration?.transaction_01,
+						transaction_02: tx.data.substring(0, 2) === "02" ? tx.hash : registration?.transaction_02,
+						transaction_03: tx.data.substring(0, 2) === "03" ? tx.hash : registration?.transaction_03,
+						transaction_04: tx.data.substring(0, 2) === "04" ? tx.hash : registration?.transaction_04,
+						transaction_05: tx.data.substring(0, 2) === "05" ? tx.hash : registration?.transaction_05,
+						transaction_06: tx.data.substring(0, 2) === "06" ? tx.hash : registration?.transaction_06,
+						deposit_transaction: registration?.deposit_transaction,
+						transaction_01_height: tx.data.substring(0, 2) === "01"
+							? block.number
+							: registration?.transaction_01_height,
+						deposit_transaction_height: registration?.deposit_transaction_height,
+					});
+				} else if (tx.data && tx.data.length >= 72 && tx.value >= VALIDATOR_DEPOSIT) {
+					// Try decoding data as utf-8 and check if it is a valid human-readable address
+					let dataDecoded: string | undefined;
+					try {
+						dataDecoded = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.from(tx.data, "hex"));
+					} catch (e) {}
+					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
+						// Handle validator deposit transaction
+						const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
+						const registration = validatorPreregistrationEntries.get(validatorAddress);
+						validatorPreregistrationEntries.set(validatorAddress, {
+							address: validatorAddress,
+							transaction_01: registration?.transaction_01,
+							transaction_02: registration?.transaction_02,
+							transaction_03: registration?.transaction_03,
+							transaction_04: registration?.transaction_04,
+							transaction_05: registration?.transaction_05,
+							transaction_06: registration?.transaction_06,
+							deposit_transaction: tx.hash,
+							transaction_01_height: registration?.transaction_01_height,
+							deposit_transaction_height: block.number,
+						});
+					}
+				}
+			}
+
 			return txEntry;
 		});
 
@@ -158,10 +220,14 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 			`For block #${i}, generated 1 block, ${txEntries.length} transactions, ${accountEntries.size} accounts`,
 		);
 
+		if (validatorPreregistrationEntries.size) {
+			console.log(`For block #${i}, generated ${validatorPreregistrationEntries.size} validator preregistrations`);
+		}
+
 		await db.transaction(async (trx) => {
 			await trx.insert(blocks).values(blockEntry);
 
-			// Accounts must be entered before transactions, so that new recipients are already in the database
+			// Accounts must be entered after blocks, so that new blocks are already in the database
 			await Promise.all(
 				Array.from(accountEntries.values())
 					.map((account) =>
@@ -182,6 +248,29 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 
 			// Transactions must be entered after accounts, so that new recipients are already in the database
 			if (txEntries.length) await trx.insert(transactions).values(txEntries);
+
+			// Validator preregistrations must be entered after transactions, so that registration transactions are already in the database
+			await Promise.all(
+				Array.from(validatorPreregistrationEntries.values())
+					.map((registration) =>
+						trx.insert(validatorPreregistrations)
+							.values(registration)
+							.onConflictDoUpdate({
+								target: validatorPreregistrations.address,
+								set: {
+									transaction_01: registration.transaction_01,
+									transaction_02: registration.transaction_02,
+									transaction_03: registration.transaction_03,
+									transaction_04: registration.transaction_04,
+									transaction_05: registration.transaction_05,
+									transaction_06: registration.transaction_06,
+									deposit_transaction: registration.deposit_transaction,
+									transaction_01_height: registration.transaction_01_height,
+									deposit_transaction_height: registration.deposit_transaction_height,
+								},
+							})
+					),
+			);
 		});
 	}
 }

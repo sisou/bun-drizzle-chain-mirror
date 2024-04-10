@@ -81,3 +81,24 @@ export const transactions = pgTable("transactions", {
 }));
 export type Transaction = typeof transactions.$inferSelect;
 export type TransactionInsert = typeof transactions.$inferInsert;
+
+export const validatorPreregistrations = pgTable("validator_preregistrations", {
+	// accounts.address deletions are not cascaded, because the deposit transaction might have been sent first, in which case the account might not yet exist
+	address: char("address", { length: 44 }).primaryKey().references(() => accounts.address),
+	transaction_01: bytea("transaction_01").references(() => transactions.hash, { onDelete: "set null" }),
+	transaction_02: bytea("transaction_02").references(() => transactions.hash, { onDelete: "set null" }),
+	transaction_03: bytea("transaction_03").references(() => transactions.hash, { onDelete: "set null" }),
+	transaction_04: bytea("transaction_04").references(() => transactions.hash, { onDelete: "set null" }),
+	transaction_05: bytea("transaction_05").references(() => transactions.hash, { onDelete: "set null" }),
+	transaction_06: bytea("transaction_06").references(() => transactions.hash, { onDelete: "set null" }),
+	deposit_transaction: bytea("deposit_transaction").references(() => transactions.hash, { onDelete: "set null" }),
+	transaction_01_height: integer("transaction_01_height").references(() => blocks.height, { onDelete: "set null" }),
+	deposit_transaction_height: integer("deposit_transaction_height").references(() => blocks.height, {
+		onDelete: "set null",
+	}),
+}, (table) => ({
+	transaction_01_height_idx: index("transaction_01_height_idx").on(table.transaction_01_height),
+	deposit_transaction_height_idx: index("deposit_transaction_height_idx").on(table.deposit_transaction_height),
+}));
+export type ValidatorPreregistration = typeof validatorPreregistrations.$inferSelect;
+export type ValidatorPreregistrationInsert = typeof validatorPreregistrations.$inferInsert;

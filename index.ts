@@ -64,5 +64,5 @@ async function poll() {
 }
 
 // Kick off polling
-console.log('Polling chain for new blocks...')
+console.log("Polling chain for new blocks...");
 poll();
