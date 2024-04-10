@@ -42,6 +42,22 @@ export const blocks = pgTable("blocks", {
 export type Block = typeof blocks.$inferSelect;
 export type BlockInsert = typeof blocks.$inferInsert;
 
+export const accounts = pgTable("accounts", {
+	address: char("address", { length: 44 }).primaryKey(),
+	type: integer("type").notNull(),
+	balance: bigint("balance", { mode: "number" }).notNull(),
+	creation_data: bytea("creation_data"), // Only for contracts
+	first_seen: integer("first_seen").references(() => blocks.height, { onDelete: "cascade" }),
+	last_sent: integer("last_sent").references(() => blocks.height, { onDelete: "set null" }),
+	last_received: integer("last_received").references(() => blocks.height, { onDelete: "set null" }),
+}, (table) => ({
+	first_seen_idx: index("first_seen_idx").on(table.first_seen),
+	last_sent_idx: index("last_sent_idx").on(table.last_sent),
+	last_received_idx: index("last_received_idx").on(table.last_received),
+}));
+export type Account = typeof accounts.$inferSelect;
+export type AccountInsert = typeof accounts.$inferInsert;
+
 export const transactions = pgTable("transactions", {
 	hash: bytea("hash").primaryKey(),
 	block_height: integer("block_height").notNull().references(() => blocks.height, { onDelete: "cascade" }),
@@ -65,19 +81,3 @@ export const transactions = pgTable("transactions", {
 }));
 export type Transaction = typeof transactions.$inferSelect;
 export type TransactionInsert = typeof transactions.$inferInsert;
-
-export const accounts = pgTable("accounts", {
-	address: char("address", { length: 44 }).primaryKey(),
-	type: integer("type").notNull(),
-	balance: bigint("balance", { mode: "number" }).notNull(),
-	creation_data: bytea("creation_data"), // Only for contracts
-	first_seen: integer("first_seen").references(() => blocks.height, { onDelete: "cascade" }),
-	last_sent: integer("last_sent").references(() => blocks.height, { onDelete: "set null" }),
-	last_received: integer("last_received").references(() => blocks.height, { onDelete: "set null" }),
-}, (table) => ({
-	first_seen_idx: index("first_seen_idx").on(table.first_seen),
-	last_sent_idx: index("last_sent_idx").on(table.last_sent),
-	last_received_idx: index("last_received_idx").on(table.last_received),
-}));
-export type Account = typeof accounts.$inferSelect;
-export type AccountInsert = typeof accounts.$inferInsert;
