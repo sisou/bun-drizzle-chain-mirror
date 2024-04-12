@@ -1,17 +1,25 @@
 import { ValidationUtils } from "@nimiq/utils";
-import { and, desc, eq, gte, lt, or } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import {
 	AccountInsert,
 	accounts,
 	BlockInsert,
 	blocks,
+	PrestakingStakerInsert,
+	prestakingStakers,
 	TransactionInsert,
 	transactions,
 	ValidatorPreregistrationInsert,
 	validatorPreregistrations,
 } from "../db/schema";
 import { db } from "./database";
-import { REGISTRATION_END_HEIGHT, REGISTRATION_START_HEIGHT, VALIDATOR_DEPOSIT } from "./lib/prestaking";
+import {
+	PRESTAKING_END_HEIGHT,
+	PRESTAKING_START_HEIGHT,
+	REGISTRATION_END_HEIGHT,
+	REGISTRATION_START_HEIGHT,
+	VALIDATOR_DEPOSIT,
+} from "./lib/prestaking";
 import { getAccount, getBlockByNumber } from "./rpc";
 
 export async function writeBlocks(fromBlock: number, toBlock: number, overwrite = false) {
@@ -72,6 +80,7 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 		});
 
 		const validatorPreregistrationEntries = new Map<string, ValidatorPreregistrationInsert>();
+		const prestakerStakerEntries = new Map<string, PrestakingStakerInsert>();
 
 		const txEntries = block.transactions.map((tx) => {
 			const txEntry: TransactionInsert = {
@@ -157,6 +166,31 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 				}
 			}
 
+			if (
+				block.number >= PRESTAKING_START_HEIGHT && block.number <= PRESTAKING_END_HEIGHT
+				&& tx.toAddress === "NQ07 0000 0000 0000 0000 0000 0000 0000 0000"
+			) {
+				if (tx.data && tx.data.length >= 72) {
+					// Try decoding data as utf-8 and check if it is a valid human-readable address
+					let dataDecoded: string | undefined;
+					try {
+						dataDecoded = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.from(tx.data, "hex"));
+					} catch (e) {}
+					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
+						const stakerAddress = tx.fromAddress;
+						const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
+						const staker = prestakerStakerEntries.get(validatorAddress);
+						prestakerStakerEntries.set(validatorAddress, {
+							address: stakerAddress,
+							delegation: validatorAddress,
+							transactions: staker?.transactions.concat(tx.hash) || [tx.hash],
+							first_transaction_height: staker?.first_transaction_height || block.number,
+							latest_transaction_height: block.number,
+						});
+					}
+				}
+			}
+
 			return txEntry;
 		});
 
@@ -224,6 +258,10 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 			console.log(`For block #${i}, generated ${validatorPreregistrationEntries.size} validator preregistrations`);
 		}
 
+		if (prestakerStakerEntries.size) {
+			console.log(`For block #${i}, generated ${prestakerStakerEntries.size} prestaking stakers`);
+		}
+
 		await db.transaction(async (trx) => {
 			await trx.insert(blocks).values(blockEntry);
 
@@ -267,6 +305,27 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 									deposit_transaction: registration.deposit_transaction,
 									transaction_01_height: registration.transaction_01_height,
 									deposit_transaction_height: registration.deposit_transaction_height,
+								},
+							})
+					),
+			);
+
+			await Promise.all(
+				Array.from(prestakerStakerEntries.values())
+					.map((staker) =>
+						trx.insert(prestakingStakers)
+							.values({
+								...staker,
+								transactions: sql.raw(`ARRAY[${staker.transactions.map(hash => `'\\x${hash}'`).join(", ")}]::bytea[]`),
+							})
+							.onConflictDoUpdate({
+								target: prestakingStakers.address,
+								set: {
+									delegation: staker.delegation,
+									transactions: sql`ARRAY_CAT(${prestakingStakers.transactions}, ${
+										sql.raw(`ARRAY[${staker.transactions.map(hash => `'\\x${hash}'`).join(", ")}]::bytea[]`)
+									})`,
+									latest_transaction_height: staker.latest_transaction_height,
 								},
 							})
 					),
