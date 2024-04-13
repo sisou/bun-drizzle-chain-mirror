@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
 	bigint,
 	char,
@@ -101,6 +102,45 @@ export const validatorPreregistrations = pgTable("validator_preregistrations", {
 }));
 export type ValidatorPreregistration = typeof validatorPreregistrations.$inferSelect;
 export type ValidatorPreregistrationInsert = typeof validatorPreregistrations.$inferInsert;
+
+export const validatorPreregistrationsRelatations = relations(validatorPreregistrations, ({ one }) => ({
+	transaction_01: one(transactions, {
+		fields: [validatorPreregistrations.transaction_01],
+		references: [transactions.hash],
+	}),
+	transaction_02: one(transactions, {
+		fields: [validatorPreregistrations.transaction_02],
+		references: [transactions.hash],
+	}),
+	transaction_03: one(transactions, {
+		fields: [validatorPreregistrations.transaction_03],
+		references: [transactions.hash],
+	}),
+	transaction_04: one(transactions, {
+		fields: [validatorPreregistrations.transaction_04],
+		references: [transactions.hash],
+	}),
+	transaction_05: one(transactions, {
+		fields: [validatorPreregistrations.transaction_05],
+		references: [transactions.hash],
+	}),
+	transaction_06: one(transactions, {
+		fields: [validatorPreregistrations.transaction_06],
+		references: [transactions.hash],
+	}),
+	deposit_transaction: one(transactions, {
+		fields: [validatorPreregistrations.deposit_transaction],
+		references: [transactions.hash],
+	}),
+	transaction_01_height: one(blocks, {
+		fields: [validatorPreregistrations.transaction_01_height],
+		references: [blocks.height],
+	}),
+	deposit_transaction_height: one(blocks, {
+		fields: [validatorPreregistrations.deposit_transaction_height],
+		references: [blocks.height],
+	}),
+}));
 
 export const prestakingStakers = pgTable("prestaking_stakers", {
 	address: char("address", { length: 44 }).primaryKey().references(() => accounts.address),
