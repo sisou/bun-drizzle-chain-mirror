@@ -12,7 +12,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-const bytea = customType<{ data: string; notNull: false; default: false }>({
+const bytea = customType<{ data: string, notNull: false, default: false }>({
 	dataType() {
 		return "bytea";
 	},
@@ -20,8 +20,10 @@ const bytea = customType<{ data: string; notNull: false; default: false }>({
 		return Buffer.from(val.startsWith("0x") ? val.slice(2) : val, "hex");
 	},
 	fromDriver(val) {
+		if (val instanceof Uint8Array) val = Buffer.from(val);
 		if (val instanceof Buffer) return val.toString("hex");
-		throw new Error(`Expected Buffer, got ${typeof val}`);
+		if (typeof val === "string" && val.startsWith("\\x")) return val.substring(2);
+		throw new Error(`Expected Buffer, got ${typeof val}: ${val}`);
 	},
 });
 
