@@ -122,7 +122,15 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 				block.number >= REGISTRATION_START_HEIGHT && block.number <= REGISTRATION_END_HEIGHT
 				&& tx.toAddress === "NQ07 0000 0000 0000 0000 0000 0000 0000 0000"
 			) {
-				if (tx.data?.length === 128 && ["01", "02", "03", "04", "05", "06"].includes(tx.data.substring(0, 2))) {
+				if (tx.data?.length === 128
+					&& (tx.data.substring(0, 24) === '010000000000000000000000' || [
+						"02000000000000",
+						"03000000000000",
+						"04000000000000",
+						"05000000000000",
+						"06000000000000",
+					].includes(tx.data.substring(0, 14)))
+				) {
 					// Handle validator pre-registration transaction
 					const validatorAddress = tx.fromAddress;
 					const registration = validatorPreregistrationEntries.get(validatorAddress);
