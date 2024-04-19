@@ -187,8 +187,8 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
 						const stakerAddress = tx.fromAddress;
 						const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
-						const staker = prestakerStakerEntries.get(validatorAddress);
-						prestakerStakerEntries.set(validatorAddress, {
+						const staker = prestakerStakerEntries.get(stakerAddress);
+						prestakerStakerEntries.set(stakerAddress, {
 							address: stakerAddress,
 							delegation: validatorAddress,
 							transactions: staker?.transactions.concat(tx.hash) || [tx.hash],
