@@ -43,6 +43,13 @@
       "when": 1712927732912,
       "tag": "0005_cute_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1716303849160,
+      "tag": "0006_mixed_vision",
+      "breakpoints": true
     }
   ]
 }

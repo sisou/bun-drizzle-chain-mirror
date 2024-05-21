@@ -1,16 +1,19 @@
 import { ValidationUtils } from "@nimiq/utils";
 import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/pg-core";
 import {
 	AccountInsert,
 	accounts,
 	BlockInsert,
 	blocks,
-	PrestakingStakerInsert,
-	prestakingStakers,
+	PrestakerInsert,
+	prestakers,
+	PrestakingTransactionInsert,
+	prestakingTransactions,
 	TransactionInsert,
 	transactions,
-	ValidatorPreregistrationInsert,
-	validatorPreregistrations,
+	ValidatorRegistrationInsert,
+	validatorRegistrations,
 } from "../db/schema";
 import { db } from "./database";
 import {
@@ -79,8 +82,9 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 			last_received: block.number,
 		});
 
-		const validatorPreregistrationEntries = new Map<string, ValidatorPreregistrationInsert>();
-		const prestakerStakerEntries = new Map<string, PrestakingStakerInsert>();
+		const validatorRegistrationEntries = new Map<string, ValidatorRegistrationInsert>();
+		const prestakerEntries = new Map<string, PrestakerInsert>();
+		const prestakingTransactionEntries: PrestakingTransactionInsert[] = [];
 
 		const txEntries = block.transactions.map((tx) => {
 			const txEntry: TransactionInsert = {
@@ -122,8 +126,9 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 				block.number >= REGISTRATION_START_HEIGHT && block.number <= REGISTRATION_END_HEIGHT
 				&& tx.toAddress === "NQ07 0000 0000 0000 0000 0000 0000 0000 0000"
 			) {
-				if (tx.data?.length === 128
-					&& (tx.data.substring(0, 24) === '010000000000000000000000' || [
+				if (
+					tx.data?.length === 128
+					&& (tx.data.substring(0, 24) === "010000000000000000000000" || [
 						"02000000000000",
 						"03000000000000",
 						"04000000000000",
@@ -133,8 +138,8 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 				) {
 					// Handle validator pre-registration transaction
 					const validatorAddress = tx.fromAddress;
-					const registration = validatorPreregistrationEntries.get(validatorAddress);
-					validatorPreregistrationEntries.set(validatorAddress, {
+					const registration = validatorRegistrationEntries.get(validatorAddress);
+					validatorRegistrationEntries.set(validatorAddress, {
 						address: validatorAddress,
 						transaction_01: tx.data.substring(0, 2) === "01" ? tx.hash : registration?.transaction_01,
 						transaction_02: tx.data.substring(0, 2) === "02" ? tx.hash : registration?.transaction_02,
@@ -157,8 +162,8 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
 						// Handle validator deposit transaction
 						const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
-						const registration = validatorPreregistrationEntries.get(validatorAddress);
-						validatorPreregistrationEntries.set(validatorAddress, {
+						const registration = validatorRegistrationEntries.get(validatorAddress);
+						validatorRegistrationEntries.set(validatorAddress, {
 							address: validatorAddress,
 							transaction_01: registration?.transaction_01,
 							transaction_02: registration?.transaction_02,
@@ -187,13 +192,16 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
 						const stakerAddress = tx.fromAddress;
 						const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
-						const staker = prestakerStakerEntries.get(stakerAddress);
-						prestakerStakerEntries.set(stakerAddress, {
+						const staker = prestakerEntries.get(stakerAddress);
+						prestakerEntries.set(stakerAddress, {
 							address: stakerAddress,
 							delegation: validatorAddress,
-							transactions: staker?.transactions.concat(tx.hash) || [tx.hash],
 							first_transaction_height: staker?.first_transaction_height || block.number,
 							latest_transaction_height: block.number,
+						});
+						prestakingTransactionEntries.push({
+							transaction_hash: tx.hash,
+							staker_address: stakerAddress,
 						});
 					}
 				}
@@ -262,82 +270,104 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 			`For block #${i}, generated 1 block, ${txEntries.length} transactions, ${accountEntries.size} accounts`,
 		);
 
-		if (validatorPreregistrationEntries.size) {
-			console.log(`For block #${i}, generated ${validatorPreregistrationEntries.size} validator preregistrations`);
+		if (validatorRegistrationEntries.size) {
+			console.log(`For block #${i}, generated ${validatorRegistrationEntries.size} validator preregistrations`);
 		}
 
-		if (prestakerStakerEntries.size) {
-			console.log(`For block #${i}, generated ${prestakerStakerEntries.size} prestaking stakers`);
+		if (prestakerEntries.size) {
+			console.log(
+				`For block #${i}, generated ${prestakerEntries.size} prestaking stakers with ${prestakingTransactionEntries.length} transactions`,
+			);
 		}
 
 		await db.transaction(async (trx) => {
 			await trx.insert(blocks).values(blockEntry);
 
-			// Accounts must be entered after blocks, so that new blocks are already in the database
-			await Promise.all(
-				Array.from(accountEntries.values())
-					.map((account) =>
-						trx.insert(accounts)
-							.values(account)
-							.onConflictDoUpdate({
-								target: accounts.address,
-								set: {
-									type: account.type,
-									balance: account.balance,
-									creation_data: account.creation_data,
-									last_sent: account.last_sent,
-									last_received: account.last_received,
-								},
-							})
-					),
-			);
+			if (accountEntries.size) {
+				// Accounts must be entered after blocks, so that new blocks are already in the database
+				const tableName = getTableConfig(accounts).name;
+				await trx.insert(accounts)
+					.values([...accountEntries.values()])
+					.onConflictDoUpdate({
+						target: accounts.address,
+						set: {
+							type: sql.raw(`COALESCE(EXCLUDED.${accounts.type.name}, ${tableName}.${accounts.type.name})`),
+							balance: sql.raw(`COALESCE(EXCLUDED.${accounts.balance.name}, ${tableName}.${accounts.balance.name})`),
+							creation_data: sql.raw(
+								`COALESCE(EXCLUDED.${accounts.creation_data.name}, ${tableName}.${accounts.creation_data.name})`,
+							),
+							last_sent: sql.raw(
+								`COALESCE(EXCLUDED.${accounts.last_sent.name}, ${tableName}.${accounts.last_sent.name})`,
+							),
+							last_received: sql.raw(
+								`COALESCE(EXCLUDED.${accounts.last_received.name}, ${tableName}.${accounts.last_received.name})`,
+							),
+						},
+					});
+			}
 
 			// Transactions must be entered after accounts, so that new recipients are already in the database
 			if (txEntries.length) await trx.insert(transactions).values(txEntries);
 
-			// Validator preregistrations must be entered after transactions, so that registration transactions are already in the database
-			await Promise.all(
-				Array.from(validatorPreregistrationEntries.values())
-					.map((registration) =>
-						trx.insert(validatorPreregistrations)
-							.values(registration)
-							.onConflictDoUpdate({
-								target: validatorPreregistrations.address,
-								set: {
-									transaction_01: registration.transaction_01,
-									transaction_02: registration.transaction_02,
-									transaction_03: registration.transaction_03,
-									transaction_04: registration.transaction_04,
-									transaction_05: registration.transaction_05,
-									transaction_06: registration.transaction_06,
-									deposit_transaction: registration.deposit_transaction,
-									transaction_01_height: registration.transaction_01_height,
-									deposit_transaction_height: registration.deposit_transaction_height,
-								},
-							})
-					),
-			);
+			if (validatorRegistrationEntries.size) {
+				// Validator preregistrations must be entered after transactions, so that registration transactions are already in the database
+				const tableName = getTableConfig(validatorRegistrations).name;
+				await trx.insert(validatorRegistrations)
+					.values([...validatorRegistrationEntries.values()])
+					.onConflictDoUpdate({
+						target: validatorRegistrations.address,
+						set: {
+							transaction_01: sql.raw(
+								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_01.name}, ${tableName}.${validatorRegistrations.transaction_01.name})`,
+							),
+							transaction_02: sql.raw(
+								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_02.name}, ${tableName}.${validatorRegistrations.transaction_02.name})`,
+							),
+							transaction_03: sql.raw(
+								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_03.name}, ${tableName}.${validatorRegistrations.transaction_03.name})`,
+							),
+							transaction_04: sql.raw(
+								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_04.name}, ${tableName}.${validatorRegistrations.transaction_04.name})`,
+							),
+							transaction_05: sql.raw(
+								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_05.name}, ${tableName}.${validatorRegistrations.transaction_05.name})`,
+							),
+							transaction_06: sql.raw(
+								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_06.name}, ${tableName}.${validatorRegistrations.transaction_06.name})`,
+							),
+							deposit_transaction: sql.raw(
+								`COALESCE(EXCLUDED.${validatorRegistrations.deposit_transaction.name}, ${tableName}.${validatorRegistrations.deposit_transaction.name})`,
+							),
+							transaction_01_height: sql.raw(
+								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_01_height.name}, ${tableName}.${validatorRegistrations.transaction_01_height.name})`,
+							),
+							deposit_transaction_height: sql.raw(
+								`COALESCE(EXCLUDED.${validatorRegistrations.deposit_transaction_height.name}, ${tableName}.${validatorRegistrations.deposit_transaction_height.name})`,
+							),
+						},
+					});
+			}
 
-			await Promise.all(
-				Array.from(prestakerStakerEntries.values())
-					.map((staker) =>
-						trx.insert(prestakingStakers)
-							.values({
-								...staker,
-								transactions: sql.raw(`ARRAY[${staker.transactions.map(hash => `'\\x${hash}'`).join(", ")}]::bytea[]`),
-							})
-							.onConflictDoUpdate({
-								target: prestakingStakers.address,
-								set: {
-									delegation: staker.delegation,
-									transactions: sql`ARRAY_CAT(${prestakingStakers.transactions}, ${
-										sql.raw(`ARRAY[${staker.transactions.map(hash => `'\\x${hash}'`).join(", ")}]::bytea[]`)
-									})`,
-									latest_transaction_height: staker.latest_transaction_height,
-								},
-							})
-					),
-			);
+			if (prestakerEntries.size) {
+				const tableName = getTableConfig(prestakers).name;
+				await trx.insert(prestakers)
+					.values([...prestakerEntries.values()])
+					.onConflictDoUpdate({
+						target: prestakers.address,
+						set: {
+							delegation: sql.raw(
+								`COALESCE(EXCLUDED.${prestakers.delegation.name}, ${tableName}.${prestakers.delegation.name})`,
+							),
+							latest_transaction_height: sql.raw(
+								`COALESCE(EXCLUDED.${prestakers.latest_transaction_height.name}, ${tableName}.${prestakers.latest_transaction_height.name})`,
+							),
+						},
+					});
+			}
+
+			if (prestakingTransactionEntries.length) {
+				await trx.insert(prestakingTransactions).values(prestakingTransactionEntries);
+			}
 		});
 	}
 }

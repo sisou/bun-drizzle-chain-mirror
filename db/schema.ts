@@ -12,7 +12,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-const bytea = customType<{ data: string, notNull: false, default: false }>({
+const bytea = customType<{ data: string; notNull: false; default: false }>({
 	dataType() {
 		return "bytea";
 	},
@@ -45,6 +45,14 @@ export const blocks = pgTable("blocks", {
 export type Block = typeof blocks.$inferSelect;
 export type BlockInsert = typeof blocks.$inferInsert;
 
+export const blocksRelations = relations(blocks, ({ many, one }) => ({
+	transactions: many(transactions),
+	creator: one(accounts, {
+		fields: [blocks.creator_address],
+		references: [accounts.address],
+	}),
+}));
+
 export const accounts = pgTable("accounts", {
 	address: char("address", { length: 44 }).primaryKey(),
 	type: integer("type").notNull(),
@@ -60,6 +68,23 @@ export const accounts = pgTable("accounts", {
 }));
 export type Account = typeof accounts.$inferSelect;
 export type AccountInsert = typeof accounts.$inferInsert;
+
+export const accountsRelations = relations(accounts, ({ many, one }) => ({
+	transactions: many(transactions),
+	blocks: many(blocks),
+	first_seen_block: one(blocks, {
+		fields: [accounts.first_seen],
+		references: [blocks.height],
+	}),
+	last_sent_block: one(blocks, {
+		fields: [accounts.last_sent],
+		references: [blocks.height],
+	}),
+	last_received_block: one(blocks, {
+		fields: [accounts.last_received],
+		references: [blocks.height],
+	}),
+}));
 
 export const transactions = pgTable("transactions", {
 	hash: bytea("hash").primaryKey(),
@@ -85,7 +110,22 @@ export const transactions = pgTable("transactions", {
 export type Transaction = typeof transactions.$inferSelect;
 export type TransactionInsert = typeof transactions.$inferInsert;
 
-export const validatorPreregistrations = pgTable("validator_preregistrations", {
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+	block: one(blocks, {
+		fields: [transactions.block_height],
+		references: [blocks.height],
+	}),
+	sender: one(accounts, {
+		fields: [transactions.sender_address],
+		references: [accounts.address],
+	}),
+	recipient: one(accounts, {
+		fields: [transactions.recipient_address],
+		references: [accounts.address],
+	}),
+}));
+
+export const validatorRegistrations = pgTable("validator_registrations", {
 	address: char("address", { length: 44 }).primaryKey().references(() => accounts.address),
 	transaction_01: bytea("transaction_01").references(() => transactions.hash, { onDelete: "set null" }),
 	transaction_02: bytea("transaction_02").references(() => transactions.hash, { onDelete: "set null" }),
@@ -102,52 +142,52 @@ export const validatorPreregistrations = pgTable("validator_preregistrations", {
 	transaction_01_height_idx: index("transaction_01_height_idx").on(table.transaction_01_height),
 	deposit_transaction_height_idx: index("deposit_transaction_height_idx").on(table.deposit_transaction_height),
 }));
-export type ValidatorPreregistration = typeof validatorPreregistrations.$inferSelect;
-export type ValidatorPreregistrationInsert = typeof validatorPreregistrations.$inferInsert;
+export type ValidatorRegistration = typeof validatorRegistrations.$inferSelect;
+export type ValidatorRegistrationInsert = typeof validatorRegistrations.$inferInsert;
 
-export const validatorPreregistrationsRelatations = relations(validatorPreregistrations, ({ one }) => ({
+export const validatorRegistrationsRelatations = relations(validatorRegistrations, ({ one, many }) => ({
 	transaction_01: one(transactions, {
-		fields: [validatorPreregistrations.transaction_01],
+		fields: [validatorRegistrations.transaction_01],
 		references: [transactions.hash],
 	}),
 	transaction_02: one(transactions, {
-		fields: [validatorPreregistrations.transaction_02],
+		fields: [validatorRegistrations.transaction_02],
 		references: [transactions.hash],
 	}),
 	transaction_03: one(transactions, {
-		fields: [validatorPreregistrations.transaction_03],
+		fields: [validatorRegistrations.transaction_03],
 		references: [transactions.hash],
 	}),
 	transaction_04: one(transactions, {
-		fields: [validatorPreregistrations.transaction_04],
+		fields: [validatorRegistrations.transaction_04],
 		references: [transactions.hash],
 	}),
 	transaction_05: one(transactions, {
-		fields: [validatorPreregistrations.transaction_05],
+		fields: [validatorRegistrations.transaction_05],
 		references: [transactions.hash],
 	}),
 	transaction_06: one(transactions, {
-		fields: [validatorPreregistrations.transaction_06],
+		fields: [validatorRegistrations.transaction_06],
 		references: [transactions.hash],
 	}),
 	deposit_transaction: one(transactions, {
-		fields: [validatorPreregistrations.deposit_transaction],
+		fields: [validatorRegistrations.deposit_transaction],
 		references: [transactions.hash],
 	}),
-	transaction_01_height: one(blocks, {
-		fields: [validatorPreregistrations.transaction_01_height],
+	transaction_01_block: one(blocks, {
+		fields: [validatorRegistrations.transaction_01_height],
 		references: [blocks.height],
 	}),
-	deposit_transaction_height: one(blocks, {
-		fields: [validatorPreregistrations.deposit_transaction_height],
+	deposit_transaction_block: one(blocks, {
+		fields: [validatorRegistrations.deposit_transaction_height],
 		references: [blocks.height],
 	}),
+	prestakers: many(prestakers),
 }));
 
-export const prestakingStakers = pgTable("prestaking_stakers", {
+export const prestakers = pgTable("prestakers", {
 	address: char("address", { length: 44 }).primaryKey().references(() => accounts.address),
 	delegation: char("delegation", { length: 44 }).notNull(),
-	transactions: bytea("transactions").array().notNull(),
 	first_transaction_height: integer("first_transaction_height").notNull().references(() => blocks.height, {
 		onDelete: "cascade",
 	}),
@@ -159,5 +199,37 @@ export const prestakingStakers = pgTable("prestaking_stakers", {
 	first_transaction_height_idx: index("first_transaction_height_idx").on(table.first_transaction_height),
 	latest_transaction_height_idx: index("latest_transaction_height_idx").on(table.latest_transaction_height),
 }));
-export type PrestakingStaker = typeof prestakingStakers.$inferSelect;
-export type PrestakingStakerInsert = typeof prestakingStakers.$inferInsert;
+export type Prestaker = typeof prestakers.$inferSelect;
+export type PrestakerInsert = typeof prestakers.$inferInsert;
+
+export const PrestakersRelatations = relations(prestakers, ({ one, many }) => ({
+	delegation: one(validatorRegistrations, {
+		fields: [prestakers.delegation],
+		references: [validatorRegistrations.address],
+	}),
+	transactions: many(prestakingTransactions),
+}));
+
+export const prestakingTransactions = pgTable("prestaking_transactions", {
+	transaction_hash: bytea("transaction_hash").notNull().unique().references(() => transactions.hash, {
+		onDelete: "cascade",
+	}),
+	staker_address: char("staker_address", { length: 44 }).notNull().references(() => prestakers.address, {
+		onDelete: "cascade",
+	}),
+}, (table) => ({
+	staker_address_idx: index("staker_address_idx").on(table.staker_address),
+}));
+export type PrestakingTransaction = typeof prestakingTransactions.$inferSelect;
+export type PrestakingTransactionInsert = typeof prestakingTransactions.$inferInsert;
+
+export const prestakingTransactionsRelations = relations(prestakingTransactions, ({ one }) => ({
+	staker: one(prestakers, {
+		fields: [prestakingTransactions.staker_address],
+		references: [prestakers.address],
+	}),
+	transaction: one(transactions, {
+		fields: [prestakingTransactions.transaction_hash],
+		references: [transactions.hash],
+	}),
+}));
