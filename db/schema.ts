@@ -3,7 +3,7 @@ import {
 	bigint,
 	char,
 	customType,
-	date,
+	timestamp,
 	index,
 	integer,
 	pgTable,
@@ -29,7 +29,7 @@ const bytea = customType<{ data: string; notNull: false; default: false }>({
 
 export const blocks = pgTable("blocks", {
 	height: integer("height").primaryKey(),
-	date: date("timestamp_ms", { mode: "date" }).notNull(),
+	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }).notNull(),
 	hash: bytea("hash").notNull(),
 	creator_address: char("creator_address", { length: 44 }).notNull(),
 	transaction_count: integer("transaction_count").notNull(),
@@ -89,7 +89,7 @@ export const accountsRelations = relations(accounts, ({ many, one }) => ({
 export const transactions = pgTable("transactions", {
 	hash: bytea("hash").primaryKey(),
 	block_height: integer("block_height").notNull().references(() => blocks.height, { onDelete: "cascade" }),
-	timestamp_ms: date("timestamp_ms", { mode: "date" }).notNull(),
+	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }).notNull(),
 	sender_address: char("sender_address", { length: 44 }).notNull().references(() => accounts.address),
 	sender_type: smallint("sender_type").notNull(),
 	sender_data: bytea("sender_data"),
@@ -103,7 +103,7 @@ export const transactions = pgTable("transactions", {
 	proof: bytea("proof"),
 }, (table) => ({
 	block_height_idx: index("block_height_idx").on(table.block_height),
-	timestamp_ms_idx: index("timestamp_ms_idx").on(table.timestamp_ms),
+	date_idx: index("date_idx").on(table.date),
 	sender_address_idx: index("sender_address_idx").on(table.sender_address),
 	recipient_address_idx: index("recipient_address_idx").on(table.recipient_address),
 }));

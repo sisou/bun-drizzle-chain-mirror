@@ -88,7 +88,7 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 
 		const txEntries = block.transactions.map((tx) => {
 			const txEntry: TransactionInsert = {
-				timestamp_ms: new Date(tx.timestamp * 1e3),
+				date: new Date(tx.timestamp * 1e3),
 				hash: tx.hash,
 				block_height: block.number,
 				sender_address: tx.fromAddress,
