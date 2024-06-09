@@ -3,12 +3,12 @@ import {
 	bigint,
 	char,
 	customType,
-	timestamp,
 	index,
 	integer,
 	pgTable,
 	real,
 	smallint,
+	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
@@ -20,7 +20,7 @@ const bytea = customType<{ data: string; notNull: false; default: false }>({
 		return Buffer.from(val.startsWith("0x") ? val.slice(2) : val, "hex");
 	},
 	fromDriver(val) {
-		if (val instanceof Uint8Array) val = Buffer.from(val);
+		if (val instanceof Uint8Array) return Buffer.from(val).toString("hex");
 		if (val instanceof Buffer) return val.toString("hex");
 		if (typeof val === "string" && val.startsWith("\\x")) return val.substring(2);
 		throw new Error(`Expected Buffer, got ${typeof val}: ${val}`);
