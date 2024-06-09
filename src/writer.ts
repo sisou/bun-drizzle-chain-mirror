@@ -76,7 +76,6 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 			address: block.minerAddress,
 			type: 0,
 			balance: 0,
-			creation_data: undefined,
 			first_seen: block.number,
 			last_sent: undefined,
 			last_received: block.number,
@@ -107,7 +106,6 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 				address: tx.fromAddress,
 				type: tx.fromType,
 				balance: 0,
-				creation_data: undefined,
 				first_seen: block.number,
 				last_sent: block.number,
 				last_received: tx.fromAddress === block.minerAddress ? block.number : undefined,
@@ -116,7 +114,6 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 				address: tx.toAddress,
 				type: tx.toType,
 				balance: 0,
-				creation_data: tx.toType !== 0 ? tx.data : undefined,
 				first_seen: block.number,
 				last_sent: undefined,
 				last_received: block.number,
@@ -293,9 +290,6 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 						set: {
 							type: sql.raw(`COALESCE(EXCLUDED.${accounts.type.name}, ${tableName}.${accounts.type.name})`),
 							balance: sql.raw(`COALESCE(EXCLUDED.${accounts.balance.name}, ${tableName}.${accounts.balance.name})`),
-							creation_data: sql.raw(
-								`COALESCE(EXCLUDED.${accounts.creation_data.name}, ${tableName}.${accounts.creation_data.name})`,
-							),
 							last_sent: sql.raw(
 								`COALESCE(EXCLUDED.${accounts.last_sent.name}, ${tableName}.${accounts.last_sent.name})`,
 							),

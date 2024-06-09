@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { db, pg } from "../src/database";
 import { Account, accounts } from "./schema";
 
-export async function seed(inserts: Account[]) {
+export async function seed(inserts: (Account & { creation_data: string | null })[]) {
 	if (!inserts.length) {
 		console.log("No genesis accounts to seed, exiting!");
 		return exit(1);
