@@ -87,12 +87,13 @@ export const accountsRelations = relations(accounts, ({ many, one }) => ({
 	vesting_owner: one(vestingOwners, {
 		fields: [accounts.address],
 		references: [vestingOwners.address],
+		relationName: "contract",
 	}),
 }));
 
 export const vestingOwners = pgTable("vesting_owners", {
 	address: char("address", { length: 44 }).primaryKey().references(() => accounts.address, { onDelete: "cascade" }),
-	owner: char("owner", { length: 44 }).notNull().references(() => accounts.address),
+	owner: char("owner", { length: 44 }).notNull(),
 }, (table) => ({
 	address_idx: index("address_idx").on(table.address),
 	owner_idx: index("owner_idx").on(table.owner),

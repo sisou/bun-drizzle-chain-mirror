@@ -71,6 +71,13 @@
       "when": 1717969990094,
       "tag": "0009_low_the_watchers",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1717971025779,
+      "tag": "0010_odd_chamber",
+      "breakpoints": true
     }
   ]
 }

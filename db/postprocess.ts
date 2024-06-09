@@ -1,6 +1,6 @@
 import { Account, Address } from "@sisou/nimiq-ts";
 import { count, eq } from "drizzle-orm";
-import { db } from "../src/database";
+import { db, pg } from "../src/database";
 import genesisAccounts from "./genesis-accounts.testnet.json" with { type: "json" };
 import { accounts, transactions, vestingOwners } from "./schema";
 
@@ -15,14 +15,20 @@ if (!vestingOwnersCount) {
 
 	let failed = false;
 
+	console.log(`Populating owners for ${vestingAccounts.length} contracts`);
+
+	let i = 0;
+
 	for (const { address } of vestingAccounts) {
 		// Find creation data of the contract
+		console.log(`Processing contract ${address} (${++i}/${vestingAccounts.length})`);
 
 		// Either from the genesis file
 		const genesisAccount = genesisAccounts.find(({ address: addr, type }) =>
 			addr === address && type === Account.Type.VESTING
 		);
 		if (genesisAccount?.creation_data) {
+			console.debug("Found creation_data in genesis accounts file");
 			const owner = Address.fromHex(genesisAccount.creation_data.substring(0, 40)).toUserFriendlyAddress();
 			await db.insert(vestingOwners).values({ address, owner });
 			continue;
@@ -49,6 +55,7 @@ if (!vestingOwnersCount) {
 			break;
 		}
 
+		console.debug("Found creation_data in creation transaction");
 		const owner = Address.fromHex(creation_data.substring(0, 40)).toUserFriendlyAddress();
 		await db.insert(vestingOwners).values({ address, owner });
 	}
@@ -57,3 +64,6 @@ if (!vestingOwnersCount) {
 		console.log("Done");
 	}
 }
+
+console.log("Closing database");
+await pg.end();
