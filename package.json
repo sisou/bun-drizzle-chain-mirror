@@ -9,7 +9,8 @@
 		"migrate:up": "bun run db/migrate.ts",
 		"migrate": "bun run migrate:generate && bun run migrate:up",
 		"seed:testnet": "bun run db/seed-testnet.ts",
-		"seed:mainnet": "bun run db/seed-mainnet.ts"
+		"seed:mainnet": "bun run db/seed-mainnet.ts",
+		"db:postprocess": "bun run db/postprocess.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.3.3",
@@ -23,6 +24,7 @@
 	},
 	"dependencies": {
 		"@nimiq/utils": "^0.10.1",
+		"@sisou/nimiq-ts": "npm:@jsr/sisou__nimiq-ts",
 		"drizzle-orm": "^0.30.8",
 		"postgres": "^3.4.4"
 	}

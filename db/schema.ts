@@ -83,6 +83,32 @@ export const accountsRelations = relations(accounts, ({ many, one }) => ({
 		fields: [accounts.last_received],
 		references: [blocks.height],
 	}),
+	vesting_contracts: many(vestingOwners, { relationName: "owner" }),
+	vesting_owner: one(vestingOwners, {
+		fields: [accounts.address],
+		references: [vestingOwners.address],
+	}),
+}));
+
+export const vestingOwners = pgTable("vesting_owners", {
+	address: char("address", { length: 44 }).primaryKey().references(() => accounts.address, { onDelete: "cascade" }),
+	owner: char("owner", { length: 44 }).notNull().references(() => accounts.address),
+}, (table) => ({
+	address_idx: index("address_idx").on(table.address),
+	owner_idx: index("owner_idx").on(table.owner),
+}));
+export type VestingOwner = typeof vestingOwners.$inferSelect;
+export type VestingOwnerInsert = typeof vestingOwners.$inferInsert;
+
+export const vestingOwnersRelations = relations(vestingOwners, ({ one }) => ({
+	contract: one(accounts, {
+		fields: [vestingOwners.address],
+		references: [accounts.address],
+	}),
+	owner: one(accounts, {
+		fields: [vestingOwners.owner],
+		references: [accounts.address],
+	}),
 }));
 
 export const transactions = pgTable("transactions", {

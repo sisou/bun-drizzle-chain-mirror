@@ -1,4 +1,5 @@
 import { ValidationUtils } from "@nimiq/utils";
+import { Account, Address } from "@sisou/nimiq-ts";
 import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
@@ -14,6 +15,8 @@ import {
 	transactions,
 	ValidatorRegistrationInsert,
 	validatorRegistrations,
+	VestingOwnerInsert,
+	vestingOwners,
 } from "../db/schema";
 import { db } from "./database";
 import {
@@ -81,6 +84,7 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 			last_received: block.number,
 		});
 
+		const vestingOwnerEntries = new Map<string, VestingOwnerInsert>();
 		const validatorRegistrationEntries = new Map<string, ValidatorRegistrationInsert>();
 		const prestakerEntries = new Map<string, PrestakerInsert>();
 		const prestakingTransactionEntries: PrestakingTransactionInsert[] = [];
@@ -118,6 +122,15 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 				last_sent: undefined,
 				last_received: block.number,
 			});
+
+			// Store vesting contract owners
+			if (tx.toType === Account.Type.VESTING && tx.data) {
+				const owner = Address.fromHex(tx.data.substring(0, 40)).toUserFriendlyAddress();
+				vestingOwnerEntries.set(tx.toAddress, {
+					address: tx.toAddress,
+					owner,
+				});
+			}
 
 			if (
 				block.number >= REGISTRATION_START_HEIGHT && block.number <= REGISTRATION_END_HEIGHT
@@ -295,6 +308,20 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 							),
 							last_received: sql.raw(
 								`COALESCE(EXCLUDED.${accounts.last_received.name}, ${tableName}.${accounts.last_received.name})`,
+							),
+						},
+					});
+			}
+
+			if (vestingOwnerEntries.size) {
+				const tableName = getTableConfig(vestingOwners).name;
+				await trx.insert(vestingOwners)
+					.values([...vestingOwnerEntries.values()])
+					.onConflictDoUpdate({
+						target: vestingOwners.address,
+						set: {
+							owner: sql.raw(
+								`COALESCE(EXCLUDED.${vestingOwners.owner.name}, ${tableName}.${vestingOwners.owner.name})`,
 							),
 						},
 					});
