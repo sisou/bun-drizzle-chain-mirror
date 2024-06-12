@@ -69,7 +69,8 @@ export type Account = typeof accounts.$inferSelect;
 export type AccountInsert = typeof accounts.$inferInsert;
 
 export const accountsRelations = relations(accounts, ({ many, one }) => ({
-	transactions: many(transactions),
+	sent_transactions: many(transactions, { relationName: "sender" }),
+	received_transactions: many(transactions, { relationName: "recipient" }),
 	blocks: many(blocks),
 	first_seen_block: one(blocks, {
 		fields: [accounts.first_seen],
@@ -144,10 +145,12 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 	sender: one(accounts, {
 		fields: [transactions.sender_address],
 		references: [accounts.address],
+		relationName: "sender",
 	}),
 	recipient: one(accounts, {
 		fields: [transactions.recipient_address],
 		references: [accounts.address],
+		relationName: "recipient",
 	}),
 }));
 
