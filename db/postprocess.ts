@@ -63,6 +63,8 @@ if (!vestingOwnersCount) {
 	if (!failed) {
 		console.log("Done");
 	}
+} else {
+	console.log("Vesting owners table already populated");
 }
 
 console.log("Closing database");
