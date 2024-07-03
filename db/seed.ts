@@ -14,7 +14,7 @@ export async function seed(inserts: (Account & { creation_data: string | null })
 
 	if (count > 0) {
 		console.log("Database already seeded, exiting!");
-		return exit(1);
+		return exit(0);
 	}
 
 	console.log("Seeding genesis accounts...");
