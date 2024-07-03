@@ -66,4 +66,4 @@ if (!vestingOwnersCount) {
 }
 
 console.log("Closing database");
-await pg.end();
+await pg.end({ timeout: 5 });

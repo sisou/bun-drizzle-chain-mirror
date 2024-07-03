@@ -7,4 +7,4 @@ await migrate(db, { migrationsFolder: "./drizzle" });
 
 // Don't forget to close the connection, otherwise the script might hang
 console.log("Closing database");
-await pg.end();
+await pg.end({ timeout: 5 });
