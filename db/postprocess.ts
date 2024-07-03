@@ -57,7 +57,7 @@ if (!vestingOwnersCount) {
 
 		console.debug("Found creation_data in creation transaction");
 		const owner = Address.fromHex(creation_data.substring(0, 40)).toUserFriendlyAddress();
-		await db.insert(vestingOwners).values({ address, owner });
+		await db.insert(vestingOwners).values({ address, owner }).onConflictDoNothing();
 	}
 
 	if (!failed) {
