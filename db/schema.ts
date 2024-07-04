@@ -117,10 +117,10 @@ export const transactions = pgTable("transactions", {
 	hash: bytea("hash").primaryKey(),
 	block_height: integer("block_height").notNull().references(() => blocks.height, { onDelete: "cascade" }),
 	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }).notNull(),
-	sender_address: char("sender_address", { length: 44 }).notNull().references(() => accounts.address),
+	sender_address: char("sender_address", { length: 44 }).notNull(),
 	sender_type: smallint("sender_type").notNull(),
 	sender_data: bytea("sender_data"),
-	recipient_address: char("recipient_address", { length: 44 }).notNull().references(() => accounts.address),
+	recipient_address: char("recipient_address", { length: 44 }).notNull(),
 	recipient_type: smallint("recipient_type").notNull(),
 	recipient_data: bytea("recipient_data"),
 	value: bigint("value", { mode: "number" }).notNull(),
@@ -155,7 +155,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 }));
 
 export const validatorRegistrations = pgTable("validator_registrations", {
-	address: char("address", { length: 44 }).primaryKey().references(() => accounts.address),
+	address: char("address", { length: 44 }).primaryKey(),
 	transaction_01: bytea("transaction_01").references(() => transactions.hash, { onDelete: "set null" }),
 	transaction_02: bytea("transaction_02").references(() => transactions.hash, { onDelete: "set null" }),
 	transaction_03: bytea("transaction_03").references(() => transactions.hash, { onDelete: "set null" }),
@@ -215,7 +215,7 @@ export const validatorRegistrationsRelatations = relations(validatorRegistration
 }));
 
 export const prestakers = pgTable("prestakers", {
-	address: char("address", { length: 44 }).primaryKey().references(() => accounts.address),
+	address: char("address", { length: 44 }).primaryKey(),
 	delegation: char("delegation", { length: 44 }).notNull(),
 	first_transaction_height: integer("first_transaction_height").notNull().references(() => blocks.height, {
 		onDelete: "cascade",

@@ -78,6 +78,13 @@
       "when": 1717971025779,
       "tag": "0010_odd_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1720091014465,
+      "tag": "0011_lumpy_rogue",
+      "breakpoints": true
     }
   ]
 }
