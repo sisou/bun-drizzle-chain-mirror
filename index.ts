@@ -1,13 +1,17 @@
-import { desc, eq } from "drizzle-orm";
-import { blocks } from "./db/schema";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { blocks, transactions } from "./db/schema";
 import { db } from "./src/database";
-import { blockNumber, getBlockByNumber } from "./src/rpc";
-import { writeBlocks } from "./src/writer";
+import { blockNumber, getBlockByNumber, getTransactionByHash, mempoolContent, type Transaction } from "./src/rpc";
+import { writeBlocks, writeMempoolTransactions } from "./src/writer";
 
 // Step 1: Catch up to the chain
 
 let dbHeight = 0;
 let chainHeight: number;
+/**
+ * A set of transaction hashes that are in the mempool.
+ */
+const mempool = new Set<string>();
 
 do {
 	const dbHeightResult = await db.select({ height: blocks.height }).from(blocks).orderBy(desc(blocks.height)).limit(1);
@@ -53,16 +57,41 @@ async function pollChain() {
 	console.info(
 		`Writing new blocks: #${commonAncestorHeight + 1} - #${currentHeight} (${forked ? "forked" : "extended"})`,
 	);
-	await writeBlocks(commonAncestorHeight + 1, currentHeight, forked);
+	await writeBlocks(commonAncestorHeight + 1, currentHeight, { forked, mempool });
 	dbHeight = currentHeight;
+}
+
+async function pollMempool() {
+	const transactionHashes = await mempoolContent(false);
+
+	const newHashes = transactionHashes.filter(hash => !mempool.has(hash));
+	const removedHashes = Array.from(mempool.keys()).filter(hash => !transactionHashes.includes(hash));
+
+	// For new hashes, fetch transactions and add to database
+	const newTxs = (await Promise.all(newHashes.map(getTransactionByHash))).filter(Boolean) as Transaction[];
+	await writeMempoolTransactions(newTxs);
+	for (const tx of newTxs) mempool.add(tx.hash);
+
+	// For removed hashes, remove non-included transactions from database
+	// Included transactions get removed from `mempool` by writeBlocks, so this is just for expired or overlooked transactions
+	for (const hash of removedHashes) {
+		await db.delete(transactions).where(and(
+			eq(transactions.hash, sql.raw(`'\\x${hash}'`)),
+			isNull(transactions.date),
+		));
+		mempool.delete(hash);
+	}
+
+	console.assert(mempool.size === transactionHashes.length, "Mempool size mismatch");
 }
 
 async function poll() {
 	await pollChain();
+	await pollMempool();
 	// Call itself again after 1s (waiting 1s _between_ polls)
 	setTimeout(poll, 1e3);
 }
 
 // Kick off polling
-console.log("Polling chain for new blocks...");
+console.log("Polling chain for new blocks and transactions...");
 poll();

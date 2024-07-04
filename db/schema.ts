@@ -115,8 +115,8 @@ export const vestingOwnersRelations = relations(vestingOwners, ({ one }) => ({
 
 export const transactions = pgTable("transactions", {
 	hash: bytea("hash").primaryKey(),
-	block_height: integer("block_height").notNull().references(() => blocks.height, { onDelete: "cascade" }),
-	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }).notNull(),
+	block_height: integer("block_height").references(() => blocks.height, { onDelete: "cascade" }),
+	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }),
 	sender_address: char("sender_address", { length: 44 }).notNull(),
 	sender_type: smallint("sender_type").notNull(),
 	sender_data: bytea("sender_data"),

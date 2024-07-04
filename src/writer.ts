@@ -3,19 +3,19 @@ import { Account, Address } from "@sisou/nimiq-ts";
 import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
-	AccountInsert,
+	type AccountInsert,
 	accounts,
-	BlockInsert,
+	type BlockInsert,
 	blocks,
-	PrestakerInsert,
+	type PrestakerInsert,
 	prestakers,
-	PrestakingTransactionInsert,
+	type PrestakingTransactionInsert,
 	prestakingTransactions,
-	TransactionInsert,
+	type TransactionInsert,
 	transactions,
-	ValidatorRegistrationInsert,
+	type ValidatorRegistrationInsert,
 	validatorRegistrations,
-	VestingOwnerInsert,
+	type VestingOwnerInsert,
 	vestingOwners,
 } from "../db/schema";
 import { db } from "./database";
@@ -26,11 +26,34 @@ import {
 	REGISTRATION_START_HEIGHT,
 	VALIDATOR_DEPOSIT,
 } from "./lib/prestaking";
-import { getAccount, getBlockByNumber } from "./rpc";
+import { getAccount, getBlockByNumber, type Transaction } from "./rpc";
 
-export async function writeBlocks(fromBlock: number, toBlock: number, overwrite = false) {
+function toTransactionInsert(tx: Transaction, blockNumber?: number): TransactionInsert {
+	return {
+		date: tx.timestamp ? new Date(tx.timestamp * 1e3) : undefined,
+		hash: tx.hash,
+		block_height: blockNumber,
+		sender_address: tx.fromAddress,
+		sender_type: tx.fromType,
+		sender_data: undefined,
+		recipient_address: tx.toAddress,
+		recipient_type: tx.toType,
+		recipient_data: tx.data,
+		value: tx.value,
+		fee: tx.fee,
+		proof: tx.proof,
+		flags: tx.flags,
+		validity_start_height: tx.validityStartHeight,
+	};
+}
+
+export async function writeBlocks(
+	fromBlock: number,
+	toBlock: number,
+	options?: Partial<{ forked: boolean; mempool: Set<string> }>,
+) {
 	let affectedAddresses = new Set<string>();
-	if (overwrite) {
+	if (options?.forked) {
 		console.log(`Deleting blocks from #${fromBlock}`);
 		// Fetch all accounts that will be affected
 		affectedAddresses = new Set(
@@ -90,22 +113,7 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 		const prestakingTransactionEntries: PrestakingTransactionInsert[] = [];
 
 		const txEntries = block.transactions.map((tx) => {
-			const txEntry: TransactionInsert = {
-				date: new Date(tx.timestamp * 1e3),
-				hash: tx.hash,
-				block_height: block.number,
-				sender_address: tx.fromAddress,
-				sender_type: tx.fromType,
-				sender_data: undefined,
-				recipient_address: tx.toAddress,
-				recipient_type: tx.toType,
-				recipient_data: tx.data,
-				value: tx.value,
-				fee: tx.fee,
-				proof: tx.proof,
-				flags: tx.flags,
-				validity_start_height: tx.validityStartHeight,
-			};
+			const txEntry = toTransactionInsert(tx, block.number);
 			accountEntries.set(tx.fromAddress, {
 				address: tx.fromAddress,
 				type: tx.fromType,
@@ -217,6 +225,8 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 				}
 			}
 
+			options?.mempool?.delete(tx.hash);
+
 			return txEntry;
 		});
 
@@ -327,8 +337,19 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 					});
 			}
 
-			// Transactions must be entered after accounts, so that new recipients are already in the database
-			if (txEntries.length) await trx.insert(transactions).values(txEntries);
+			if (txEntries.length) {
+				const tableName = getTableConfig(transactions).name;
+				await trx.insert(transactions).values(txEntries).onConflictDoUpdate({
+					target: transactions.hash,
+					set: {
+						block_height: sql.raw(
+							`COALESCE(EXCLUDED.${transactions.block_height.name}, ${tableName}.${transactions.block_height.name})`,
+						),
+						date: sql.raw(`COALESCE(EXCLUDED.${transactions.date.name}, ${tableName}.${transactions.date.name})`),
+						proof: sql.raw(`COALESCE(EXCLUDED.${transactions.proof.name}, ${tableName}.${transactions.proof.name})`),
+					},
+				});
+			}
 
 			if (validatorRegistrationEntries.size) {
 				// Validator preregistrations must be entered after transactions, so that registration transactions are already in the database
@@ -391,4 +412,10 @@ export async function writeBlocks(fromBlock: number, toBlock: number, overwrite 
 			}
 		});
 	}
+}
+
+export async function writeMempoolTransactions(txs: Transaction[]) {
+	if (!txs.length) return;
+	const txEntries = txs.map(toTransactionInsert);
+	await db.insert(transactions).values(txEntries).onConflictDoNothing();
 }

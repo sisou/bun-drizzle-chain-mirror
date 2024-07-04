@@ -85,6 +85,13 @@
       "when": 1720091014465,
       "tag": "0011_lumpy_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1720091037585,
+      "tag": "0012_tiny_shotgun",
+      "breakpoints": true
     }
   ]
 }

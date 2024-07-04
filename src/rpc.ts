@@ -60,8 +60,14 @@ export type Transaction = {
 	networkId: number;
 };
 
-export async function mempoolContent(): Promise<Transaction[]> {
-	return rpc<Transaction[]>("mempoolContent", [true]);
+export async function mempoolContent(fullTxs: false): Promise<string[]>;
+export async function mempoolContent(fullTxs: true): Promise<Transaction[]>;
+export async function mempoolContent(fullTxs: boolean): Promise<string[] | Transaction[]> {
+	return rpc<string[] | Transaction[]>("mempoolContent", [fullTxs]);
+}
+
+export async function getTransactionByHash(hash: string): Promise<Transaction | null> {
+	return rpc<Transaction | null>("getTransactionByHash", [hash]);
 }
 
 export type Block = {
