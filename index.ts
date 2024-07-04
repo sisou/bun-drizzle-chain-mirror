@@ -30,6 +30,10 @@ do {
 
 console.log("Caught up!");
 
+// Delete all non-included transactions, in case there were any left when the writer last exited
+const deleted = await db.delete(transactions).where(isNull(transactions.date));
+console.log(`Deleted ${deleted.count} non-included transactions`);
+
 // Step 2: Start listening for blocks live
 // (Also handle missing blocks in between.)
 
