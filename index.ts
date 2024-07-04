@@ -70,7 +70,9 @@ async function pollMempool() {
 	if (removedHashes.length) console.log("Mempool removed hashes:", removedHashes);
 
 	// For new hashes, fetch transactions and add to database
-	const newTxs = (await Promise.all(newHashes.map(getTransactionByHash))).filter(Boolean) as Transaction[];
+	const newTxs = (await Promise.all(
+		newHashes.map((hash) => getTransactionByHash(hash)),
+	)).filter(Boolean) as Transaction[];
 	await writeMempoolTransactions(newTxs);
 	for (const tx of newTxs) mempool.add(tx.hash);
 

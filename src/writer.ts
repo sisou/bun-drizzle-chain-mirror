@@ -416,6 +416,6 @@ export async function writeBlocks(
 
 export async function writeMempoolTransactions(txs: Transaction[]) {
 	if (!txs.length) return;
-	const txEntries = txs.map(toTransactionInsert);
+	const txEntries = txs.map((tx) => toTransactionInsert(tx));
 	await db.insert(transactions).values(txEntries).onConflictDoNothing();
 }
