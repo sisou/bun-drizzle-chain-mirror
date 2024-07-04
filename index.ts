@@ -65,7 +65,9 @@ async function pollMempool() {
 	const transactionHashes = await mempoolContent(false);
 
 	const newHashes = transactionHashes.filter(hash => !mempool.has(hash));
+	if (newHashes.length) console.log("Mempool new hashes:", newHashes);
 	const removedHashes = Array.from(mempool.keys()).filter(hash => !transactionHashes.includes(hash));
+	if (removedHashes.length) console.log("Mempool removed hashes:", removedHashes);
 
 	// For new hashes, fetch transactions and add to database
 	const newTxs = (await Promise.all(newHashes.map(getTransactionByHash))).filter(Boolean) as Transaction[];
