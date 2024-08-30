@@ -63,6 +63,12 @@ async function pollChain() {
 	);
 	await writeBlocks(commonAncestorHeight + 1, currentHeight, { forked, mempool });
 	dbHeight = currentHeight;
+
+	try {
+		ws.send(JSON.stringify({ password: process.env.WEBSOCKET_PASSWORD, height: dbHeight }));
+	} catch (error) {
+		console.error("Failed to send WS update:", error);
+	}
 }
 
 async function pollMempool() {
@@ -103,3 +109,31 @@ async function poll() {
 // Kick off polling
 console.log("Polling chain for new blocks and transactions...");
 poll();
+
+// Connect websocket to frontend to notify of new blocks
+let ws: WebSocket;
+function connectWS() {
+	const url = process.env.WEBSOCKET_URL;
+	if (!url) {
+		return console.error("Missing WEBSOCKET_URL env variable, cannot start websocket");
+	}
+
+	// Set up websocket connection
+	ws = new WebSocket(url);
+	ws.onopen = function() {
+		console.log("Websocket OPENED");
+		ws.send(JSON.stringify({ password: process.env.WEBSOCKET_PASSWORD, height: dbHeight }));
+	};
+	ws.onerror = function(e) {
+		if ('message' in e) {
+			console.error(`Websocket ERROR: ${e.message}`);
+		} else {
+			console.error(`Websocket ERROR: Generic error`);
+		}
+	};
+	ws.onclose = function() {
+		console.log("Websocket CLOSED");
+		setTimeout(connectWS, 2000);
+	};
+}
+connectWS();
