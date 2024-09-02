@@ -11,7 +11,8 @@
 		"seed:testnet": "bun run db/seed-testnet.ts",
 		"seed:mainnet": "bun run db/seed-mainnet.ts",
 		"db:postprocess": "bun run db/postprocess.ts",
-		"start": "bun run migrate:up && bun run seed:testnet && bun run db:postprocess && bun run index.ts"
+		"start:testnet": "bun run migrate:up && bun run seed:testnet && bun run db:postprocess && bun run index.ts",
+		"start:mainnet": "bun run migrate:up && bun run seed:mainnet && bun run db:postprocess && bun run index.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.3.3",
