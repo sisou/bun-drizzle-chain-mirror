@@ -20,6 +20,7 @@ import {
 } from "../db/schema";
 import { db } from "./database";
 import {
+	MIN_DELEGATION,
 	PRESTAKING_END_HEIGHT,
 	PRESTAKING_START_HEIGHT,
 	REGISTRATION_END_HEIGHT,
@@ -201,7 +202,7 @@ export async function writeBlocks(
 				block.number >= PRESTAKING_START_HEIGHT && block.number <= PRESTAKING_END_HEIGHT
 				&& tx.toAddress === "NQ07 0000 0000 0000 0000 0000 0000 0000 0000"
 			) {
-				if (tx.data && tx.data.length >= 72) {
+				if (tx.data && tx.data.length >= 72 && tx.value >= MIN_DELEGATION) {
 					// Try decoding data as utf-8 and check if it is a valid human-readable address
 					let dataDecoded: string | undefined;
 					try {
