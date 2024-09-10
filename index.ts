@@ -125,7 +125,7 @@ function connectWS() {
 		ws.send(JSON.stringify({ password: process.env.WEBSOCKET_PASSWORD, height: dbHeight }));
 	};
 	ws.onerror = function(e) {
-		if ('message' in e) {
+		if ("message" in e) {
 			console.error(`Websocket ERROR: ${e.message}`);
 		} else {
 			console.error(`Websocket ERROR: Generic error`);
