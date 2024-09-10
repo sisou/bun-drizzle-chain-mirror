@@ -20,6 +20,7 @@ import {
 } from "../db/schema";
 import { db } from "./database";
 import {
+	BURN_ADDRESS,
 	MIN_DELEGATION,
 	PRESTAKING_END_HEIGHT,
 	PRESTAKING_START_HEIGHT,
@@ -144,7 +145,7 @@ export async function writeBlocks(
 
 			if (
 				block.number >= REGISTRATION_START_HEIGHT && block.number <= REGISTRATION_END_HEIGHT
-				&& tx.toAddress === "NQ07 0000 0000 0000 0000 0000 0000 0000 0000"
+				&& tx.toAddress === BURN_ADDRESS
 			) {
 				if (
 					tx.data?.length === 128
@@ -201,7 +202,7 @@ export async function writeBlocks(
 
 			if (
 				block.number >= PRESTAKING_START_HEIGHT && block.number <= PRESTAKING_END_HEIGHT
-				&& tx.toAddress === "NQ07 0000 0000 0000 0000 0000 0000 0000 0000"
+				&& tx.toAddress === BURN_ADDRESS
 			) {
 				if (tx.data && tx.data.length >= 72) {
 					// Try decoding data as utf-8 and check if it is a valid human-readable address

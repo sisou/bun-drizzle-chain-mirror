@@ -1,6 +1,8 @@
 const network = process.env.NETWORK || "testnet";
 const isMainnet = network.includes("main");
 
+export const BURN_ADDRESS = "NQ07 0000 0000 0000 0000 0000 0000 0000 0000";
+
 /**
  * Validator deposit in luna.
  */
