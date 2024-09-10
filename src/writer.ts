@@ -113,8 +113,9 @@ export async function writeBlocks(
 		const prestakerEntries = new Map<string, PrestakerInsert>();
 		const prestakingTransactionEntries: PrestakingTransactionInsert[] = [];
 
-		const txEntries = block.transactions.map((tx) => {
-			const txEntry = toTransactionInsert(tx, block.number);
+		const txEntries = block.transactions.map((tx) => toTransactionInsert(tx, block.number));
+
+		for (const tx of block.transactions) {
 			accountEntries.set(tx.fromAddress, {
 				address: tx.fromAddress,
 				type: tx.fromType,
@@ -202,7 +203,7 @@ export async function writeBlocks(
 				block.number >= PRESTAKING_START_HEIGHT && block.number <= PRESTAKING_END_HEIGHT
 				&& tx.toAddress === "NQ07 0000 0000 0000 0000 0000 0000 0000 0000"
 			) {
-				if (tx.data && tx.data.length >= 72 && tx.value >= MIN_DELEGATION) {
+				if (tx.data && tx.data.length >= 72) {
 					// Try decoding data as utf-8 and check if it is a valid human-readable address
 					let dataDecoded: string | undefined;
 					try {
@@ -211,25 +212,33 @@ export async function writeBlocks(
 					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
 						const stakerAddress = tx.fromAddress;
 						const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
-						const staker = prestakerEntries.get(stakerAddress);
-						prestakerEntries.set(stakerAddress, {
-							address: stakerAddress,
-							delegation: validatorAddress,
-							first_transaction_height: staker?.first_transaction_height || block.number,
-							latest_transaction_height: block.number,
-						});
-						prestakingTransactionEntries.push({
-							transaction_hash: tx.hash,
-							staker_address: stakerAddress,
-						});
+
+						// If transaction value is below MIN_DELEGATION, the transaction is only valid for prestaking
+						// when the staker already exists.
+						if (
+							tx.value >= MIN_DELEGATION || await db.query.prestakers.findFirst({
+								where: eq(prestakers.address, stakerAddress),
+								columns: {},
+							})
+						) {
+							const staker = prestakerEntries.get(stakerAddress);
+							prestakerEntries.set(stakerAddress, {
+								address: stakerAddress,
+								delegation: validatorAddress,
+								first_transaction_height: staker?.first_transaction_height || block.number,
+								latest_transaction_height: block.number,
+							});
+							prestakingTransactionEntries.push({
+								transaction_hash: tx.hash,
+								staker_address: stakerAddress,
+							});
+						}
 					}
 				}
 			}
 
 			options?.mempool?.delete(tx.hash);
-
-			return txEntry;
-		});
+		}
 
 		// Fetch balances
 		await Promise.all(
