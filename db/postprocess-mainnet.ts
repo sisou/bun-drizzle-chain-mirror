@@ -1,4 +1,4 @@
 import MainnetGenesisAccounts from "./genesis-accounts.mainnet.json" with {type: "json"};
-import { seed } from "./seed";
+import { postprocess } from "./postprocess";
 
-await seed(MainnetGenesisAccounts);
+await postprocess(MainnetGenesisAccounts);

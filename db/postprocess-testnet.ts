@@ -1,4 +1,4 @@
 import TestnetGenesisAccounts from "./genesis-accounts.testnet.json" with {type: "json"};
-import { seed } from "./seed";
+import { postprocess } from "./postprocess";
 
-await seed(TestnetGenesisAccounts);
+await postprocess(TestnetGenesisAccounts);

@@ -10,9 +10,10 @@
 		"migrate": "bun run migrate:generate && bun run migrate:up",
 		"seed:testnet": "bun run db/seed-testnet.ts",
 		"seed:mainnet": "bun run db/seed-mainnet.ts",
-		"db:postprocess": "bun run db/postprocess.ts",
-		"start:testnet": "bun run migrate:up && bun run seed:testnet && bun run db:postprocess && bun run index.ts",
-		"start:mainnet": "bun run migrate:up && bun run seed:mainnet && bun run db:postprocess && bun run index.ts"
+		"db:postprocess:testnet": "bun run db/postprocess-testnet.ts",
+		"db:postprocess:mainnet": "bun run db/postprocess-mainnet.ts",
+		"start:testnet": "bun run migrate:up && bun run seed:testnet && bun run db:postprocess:testnet && bun run index.ts",
+		"start:mainnet": "bun run migrate:up && bun run seed:mainnet && bun run db:postprocess:mainnet && bun run index.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.3.3",
