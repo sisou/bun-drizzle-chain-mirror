@@ -1,6 +1,6 @@
 import { ValidationUtils } from "@nimiq/utils";
 import { Account, Address } from "@sisou/nimiq-ts";
-import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, lt, or, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
 	type AccountInsert,
@@ -116,6 +116,85 @@ export async function writeBlocks(
 
 		const txEntries = block.transactions.map((tx) => toTransactionInsert(tx, block.number));
 
+		let stakingContract: {
+			validators: {
+				address: String;
+				deposit: number;
+				delegatedStake: number;
+			}[];
+			totalStake: number;
+		} | undefined;
+
+		async function getStakingContract() {
+			if (!stakingContract) {
+				const validators = await db.query.validatorRegistrations.findMany({
+					where: and(
+						isNotNull(validatorRegistrations.transaction_01),
+						isNotNull(validatorRegistrations.transaction_02),
+						isNotNull(validatorRegistrations.transaction_03),
+						isNotNull(validatorRegistrations.transaction_04),
+						isNotNull(validatorRegistrations.transaction_05),
+						isNotNull(validatorRegistrations.transaction_06),
+						isNotNull(validatorRegistrations.deposit_transaction),
+					),
+					columns: {
+						address: true,
+					},
+					with: {
+						deposit_transaction: {
+							columns: {
+								value: true,
+							},
+						},
+						prestakers: {
+							columns: {},
+							with: {
+								transactions: {
+									columns: {},
+									with: {
+										transaction: {
+											columns: {
+												value: true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				});
+
+				const validatorStakes = validators.map((validator) => {
+					let deposit = validator.deposit_transaction!.value;
+					// Do not count extra stake in deposit transaction that is below the minimum stake of 100 NIM
+					if (deposit < 100_100e5) {
+						deposit = 100_000e5;
+					}
+					const prestake = validator.prestakers.reduce((total, prestaker) => {
+						const prestake = prestaker.transactions.reduce((total, transaction) => {
+							return total + (transaction.transaction.value >= 100e5 ? transaction.transaction.value : 0);
+						}, 0);
+						return total + prestake;
+					}, 0);
+
+					return {
+						address: validator.address,
+						deposit,
+						delegatedStake: prestake,
+					};
+				}, 0);
+
+				stakingContract = {
+					validators: validatorStakes,
+					totalStake: validatorStakes.reduce(
+						(total, { deposit, delegatedStake }) => total + deposit + delegatedStake,
+						0,
+					),
+				};
+			}
+			return stakingContract;
+		}
+
 		for (const tx of block.transactions) {
 			accountEntries.set(tx.fromAddress, {
 				address: tx.fromAddress,
@@ -229,9 +308,15 @@ export async function writeBlocks(
 								first_transaction_height: staker?.first_transaction_height || block.number,
 								latest_transaction_height: block.number,
 							});
+
+							const stakingContract = await getStakingContract();
+							const validator = stakingContract.validators.find(validator => validator.address === validatorAddress)
+								|| { address: validatorAddress, deposit: 0, delegatedStake: 0 };
+
 							prestakingTransactionEntries.push({
 								transaction_hash: tx.hash,
 								staker_address: stakerAddress,
+								validator_stake_ratio: (validator.deposit + validator.delegatedStake) / stakingContract.totalStake,
 							});
 						}
 					}

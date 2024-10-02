@@ -246,6 +246,7 @@ export const prestakingTransactions = pgTable("prestaking_transactions", {
 	staker_address: char("staker_address", { length: 44 }).notNull().references(() => prestakers.address, {
 		onDelete: "cascade",
 	}),
+	validator_stake_ratio: real("validator_stake_ratio").notNull(),
 }, (table) => ({
 	staker_address_idx: index("staker_address_idx").on(table.staker_address),
 }));
