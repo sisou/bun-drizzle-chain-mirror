@@ -298,7 +298,9 @@ export async function writeBlocks(
 						if (
 							tx.value >= MIN_DELEGATION || await db.query.prestakers.findFirst({
 								where: eq(prestakers.address, stakerAddress),
-								columns: {},
+								columns: {
+									address: true,
+								},
 							})
 						) {
 							const staker = prestakerEntries.get(stakerAddress);
