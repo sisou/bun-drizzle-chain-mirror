@@ -1,0 +1,1 @@
+ALTER TABLE "prestakers" ALTER COLUMN "latest_transaction_height" DROP NOT NULL;

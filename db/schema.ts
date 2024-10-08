@@ -220,7 +220,7 @@ export const prestakers = pgTable("prestakers", {
 	first_transaction_height: integer("first_transaction_height").notNull().references(() => blocks.height, {
 		onDelete: "cascade",
 	}),
-	latest_transaction_height: integer("latest_transaction_height").notNull().references(() => blocks.height, {
+	latest_transaction_height: integer("latest_transaction_height").references(() => blocks.height, {
 		onDelete: "set null",
 	}),
 }, (table) => ({
