@@ -115,7 +115,7 @@ export async function writeBlocks(
 		const prestakerEntries = new Map<string, PrestakerInsert>();
 		const prestakingTransactionEntries: PrestakingTransactionInsert[] = [];
 
-		const txEntries = block.transactions.map((tx) => toTransactionInsert(tx, block.number));
+		const txEntries: TransactionInsert[] = block.transactions.map((tx) => toTransactionInsert(tx, block.number));
 
 		for (const tx of block.transactions) {
 			accountEntries.set(tx.fromAddress, {
@@ -160,7 +160,9 @@ export async function writeBlocks(
 				) {
 					// Handle validator pre-registration transaction
 					const validatorAddress = tx.fromAddress;
-					const registration = validatorRegistrationEntries.get(validatorAddress);
+					const registration: ValidatorRegistrationInsert | undefined = validatorRegistrationEntries.get(
+						validatorAddress,
+					);
 					validatorRegistrationEntries.set(validatorAddress, {
 						address: validatorAddress,
 						transaction_01: tx.data.substring(0, 2) === "01" ? tx.hash : registration?.transaction_01,
@@ -184,7 +186,9 @@ export async function writeBlocks(
 					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
 						// Handle validator deposit transaction
 						const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
-						const registration = validatorRegistrationEntries.get(validatorAddress);
+						const registration: ValidatorRegistrationInsert | undefined = validatorRegistrationEntries.get(
+							validatorAddress,
+						);
 						validatorRegistrationEntries.set(validatorAddress, {
 							address: validatorAddress,
 							transaction_01: registration?.transaction_01,
@@ -225,7 +229,7 @@ export async function writeBlocks(
 								},
 							})
 						) {
-							const staker = prestakerEntries.get(stakerAddress);
+							const staker: PrestakerInsert | undefined = prestakerEntries.get(stakerAddress);
 							prestakerEntries.set(stakerAddress, {
 								address: stakerAddress,
 								delegation: validatorAddress,
@@ -295,7 +299,7 @@ export async function writeBlocks(
 		if (affectedAddresses.size) {
 			await Promise.all(
 				Array.from(affectedAddresses.values()).map(async (address) => {
-					const entry = accountEntries.get(address)
+					const entry: AccountInsert | undefined = accountEntries.get(address)
 						|| await db.select().from(accounts).where(eq(accounts.address, address)).limit(1).then(res => res[0]);
 					if (!entry) {
 						console.error(`Fork-affected account ${address} not found!!!`);
@@ -472,7 +476,7 @@ export async function writeMempoolTransactions(txs: Transaction[]) {
 	await db.insert(transactions).values(txEntries).onConflictDoNothing();
 }
 
-let validators: {
+type DbValidator = {
 	address: string;
 	deposit_transaction: {
 		value: number;
@@ -485,7 +489,9 @@ let validators: {
 			};
 		}[];
 	}[];
-}[] | undefined;
+};
+
+let validators: DbValidator[] | undefined;
 
 async function getValidators() {
 	if (!validators) {
@@ -530,9 +536,20 @@ async function getValidators() {
 	return validators;
 }
 
-async function getStakingContractAtBlockHeight(height: number) {
+type Validator = {
+	address: string;
+	deposit: number;
+	delegatedStake: number;
+};
+
+type StakingContract = {
+	validators: Validator[];
+	totalStake: number;
+};
+
+async function getStakingContractAtBlockHeight(height: number): Promise<StakingContract> {
 	const validators = await getValidators();
-	const validatorStakes = validators.map(({ address, deposit_transaction, prestakers }) => {
+	const validatorStakes: Validator[] = validators.map(({ address, deposit_transaction, prestakers }) => {
 		if (!deposit_transaction) {
 			return {
 				address,
