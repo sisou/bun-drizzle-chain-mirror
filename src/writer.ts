@@ -223,7 +223,7 @@ export async function writeBlocks(
 			}
 
 			if (
-				block.number >= REGISTRATION_START_HEIGHT && block.number <= REGISTRATION_END_HEIGHT
+				block.number >= REGISTRATION_START_HEIGHT && block.number < REGISTRATION_END_HEIGHT
 				&& tx.toAddress === BURN_ADDRESS
 			) {
 				if (
@@ -280,7 +280,7 @@ export async function writeBlocks(
 			}
 
 			if (
-				block.number >= PRESTAKING_START_HEIGHT && block.number <= PRESTAKING_END_HEIGHT
+				block.number >= PRESTAKING_START_HEIGHT && block.number < PRESTAKING_END_HEIGHT
 				&& tx.toAddress === BURN_ADDRESS
 			) {
 				if (tx.data && tx.data.length >= 72) {
