@@ -116,85 +116,6 @@ export async function writeBlocks(
 
 		const txEntries = block.transactions.map((tx) => toTransactionInsert(tx, block.number));
 
-		let stakingContract: {
-			validators: {
-				address: String;
-				deposit: number;
-				delegatedStake: number;
-			}[];
-			totalStake: number;
-		} | undefined;
-
-		async function getStakingContract() {
-			if (!stakingContract) {
-				const validators = await db.query.validatorRegistrations.findMany({
-					where: and(
-						isNotNull(validatorRegistrations.transaction_01),
-						isNotNull(validatorRegistrations.transaction_02),
-						isNotNull(validatorRegistrations.transaction_03),
-						isNotNull(validatorRegistrations.transaction_04),
-						isNotNull(validatorRegistrations.transaction_05),
-						isNotNull(validatorRegistrations.transaction_06),
-						isNotNull(validatorRegistrations.deposit_transaction),
-					),
-					columns: {
-						address: true,
-					},
-					with: {
-						deposit_transaction: {
-							columns: {
-								value: true,
-							},
-						},
-						prestakers: {
-							columns: {},
-							with: {
-								transactions: {
-									columns: {},
-									with: {
-										transaction: {
-											columns: {
-												value: true,
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				});
-
-				const validatorStakes = validators.map((validator) => {
-					let deposit = validator.deposit_transaction!.value;
-					// Do not count extra stake in deposit transaction that is below the minimum stake of 100 NIM
-					if (deposit < 100_100e5) {
-						deposit = 100_000e5;
-					}
-					const prestake = validator.prestakers.reduce((total, prestaker) => {
-						const prestake = prestaker.transactions.reduce((total, transaction) => {
-							return total + (transaction.transaction.value >= 100e5 ? transaction.transaction.value : 0);
-						}, 0);
-						return total + prestake;
-					}, 0);
-
-					return {
-						address: validator.address,
-						deposit,
-						delegatedStake: prestake,
-					};
-				}, 0);
-
-				stakingContract = {
-					validators: validatorStakes,
-					totalStake: validatorStakes.reduce(
-						(total, { deposit, delegatedStake }) => total + deposit + delegatedStake,
-						0,
-					),
-				};
-			}
-			return stakingContract;
-		}
-
 		for (const tx of block.transactions) {
 			accountEntries.set(tx.fromAddress, {
 				address: tx.fromAddress,
@@ -311,14 +232,30 @@ export async function writeBlocks(
 								latest_transaction_height: block.number,
 							});
 
-							const stakingContract = await getStakingContract();
-							const validator = stakingContract.validators.find(validator => validator.address === validatorAddress)
+							// Take the lower validator stake ratio of the current and previous state
+							const stakingContractNow = await getStakingContractAtBlockHeight(block.number - 1);
+							const stakingContractBefore = await getStakingContractAtBlockHeight(block.number - 2);
+
+							const validatorNow = stakingContractNow.validators.find(validator =>
+								validator.address === validatorAddress
+							)
 								|| { address: validatorAddress, deposit: 0, delegatedStake: 0 };
+							const validatorBefore = stakingContractBefore.validators.find(validator =>
+								validator.address === validatorAddress
+							)
+								|| { address: validatorAddress, deposit: 0, delegatedStake: 0 };
+
+							const validatorStakeRatioNow = (validatorNow.deposit + validatorNow.delegatedStake)
+								/ stakingContractNow.totalStake;
+							const validatorStakeRatioBefore = (validatorBefore.deposit + validatorBefore.delegatedStake)
+								/ stakingContractBefore.totalStake;
+
+							const validatorStakeRatio = Math.min(validatorStakeRatioNow, validatorStakeRatioBefore);
 
 							prestakingTransactionEntries.push({
 								transaction_hash: tx.hash,
 								staker_address: stakerAddress,
-								validator_stake_ratio: (validator.deposit + validator.delegatedStake) / stakingContract.totalStake,
+								validator_stake_ratio: validatorStakeRatio,
 							});
 						}
 					}
@@ -516,4 +453,102 @@ export async function writeMempoolTransactions(txs: Transaction[]) {
 	if (!txs.length) return;
 	const txEntries = txs.map((tx) => toTransactionInsert(tx));
 	await db.insert(transactions).values(txEntries).onConflictDoNothing();
+}
+
+let validators: {
+	address: string;
+	deposit_transaction: {
+		value: number;
+	} | null;
+	prestakers: {
+		transactions: {
+			transaction: {
+				value: number;
+				block_height: number | null;
+			};
+		}[];
+	}[];
+}[] | undefined;
+
+async function getValidators() {
+	if (!validators) {
+		validators = await db.query.validatorRegistrations.findMany({
+			where: and(
+				isNotNull(validatorRegistrations.transaction_01),
+				isNotNull(validatorRegistrations.transaction_02),
+				isNotNull(validatorRegistrations.transaction_03),
+				isNotNull(validatorRegistrations.transaction_04),
+				isNotNull(validatorRegistrations.transaction_05),
+				isNotNull(validatorRegistrations.transaction_06),
+				isNotNull(validatorRegistrations.deposit_transaction),
+			),
+			columns: {
+				address: true,
+			},
+			with: {
+				deposit_transaction: {
+					columns: {
+						value: true,
+					},
+				},
+				prestakers: {
+					columns: {},
+					with: {
+						transactions: {
+							columns: {},
+							with: {
+								transaction: {
+									columns: {
+										block_height: true,
+										value: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		});
+	}
+	return validators;
+}
+
+async function getStakingContractAtBlockHeight(height: number) {
+	const validators = await getValidators();
+	const validatorStakes = validators.map(({ address, deposit_transaction, prestakers }) => {
+		if (!deposit_transaction) {
+			return {
+				address,
+				deposit: 0,
+				delegatedStake: 0,
+			};
+		}
+		let deposit = deposit_transaction.value;
+		// Do not count extra stake in deposit transaction that is below the minimum stake of 100 NIM
+		if (deposit < 100_100e5) {
+			deposit = 100_000e5;
+		}
+		const prestake = prestakers.reduce((total, { transactions }) => {
+			let hadValidTransaction = false;
+			return total + transactions.reduce((total, { transaction }) => {
+				if (transaction.block_height && transaction.block_height > height) return total;
+				hadValidTransaction = hadValidTransaction || transaction.value >= 100e5;
+				return total + (hadValidTransaction ? transaction.value : 0);
+			}, 0);
+		}, 0);
+
+		return {
+			address,
+			deposit,
+			delegatedStake: prestake,
+		};
+	}, 0);
+
+	return {
+		validators: validatorStakes,
+		totalStake: validatorStakes.reduce(
+			(total, { deposit, delegatedStake }) => total + deposit + delegatedStake,
+			0,
+		),
+	};
 }
