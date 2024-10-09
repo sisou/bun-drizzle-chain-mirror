@@ -6,8 +6,8 @@
 
 import { ValidationUtils } from "@nimiq/utils";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
-import { db, pg } from "../src/database";
 import * as schema from "../db/schema";
+import { db } from "../src/database";
 
 const prestakingTransactions = await db.query.prestakingTransactions.findMany({
 	with: {
@@ -90,7 +90,7 @@ for (const tx of prestakingTransactions) {
 
 console.log("Processed", count, "pre-staking transactions");
 
-await pg.end({ timeout: 5 });
+await db.$client.end({ timeout: 5 });
 
 async function getStakingContract() {
 	console.log("Fetching staking contract data");

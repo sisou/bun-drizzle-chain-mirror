@@ -1,11 +1,11 @@
 import type { Config } from "drizzle-kit";
 
 export default {
+	dialect: "postgresql",
 	schema: "./db/schema.ts",
-	driver: "pg",
 	dbCredentials: {
 		// biome-ignore lint/style/noNonNullAssertion: we know this is set
-		connectionString: process.env.DATABASE_URL!,
+		url: process.env.DATABASE_URL!,
 	},
 	verbose: true,
 	strict: true,

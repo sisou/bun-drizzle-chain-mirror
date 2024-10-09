@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db, pg } from "../src/database";
+import { db } from "../src/database";
 import { Account, accounts } from "./schema";
 
 export async function seed(inserts: (Account & { creation_data: string | null })[]) {
@@ -29,7 +29,7 @@ export async function seed(inserts: (Account & { creation_data: string | null })
 async function exit(code: number) {
 	// Don't forget to close the connection, otherwise the script might hang
 	console.log("Closing database");
-	await pg.end({ timeout: 5 });
+	await db.$client.end({ timeout: 5 });
 
 	process.exit(code);
 }

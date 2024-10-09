@@ -1,6 +1,6 @@
 import { Account, Address } from "@sisou/nimiq-ts";
 import { count, eq } from "drizzle-orm";
-import { db, pg } from "../src/database";
+import { db } from "../src/database";
 import { accounts, transactions, vestingOwners } from "./schema";
 
 type GenesisAccount = { address: string; type: Account.Type; creation_data: string | null };
@@ -70,5 +70,5 @@ export async function postprocess(genesisAccounts: GenesisAccount[]) {
 	}
 
 	console.log("Closing database");
-	await pg.end({ timeout: 5 });
+	await db.$client.end({ timeout: 5 });
 }
