@@ -6,8 +6,8 @@
 
 import { ValidationUtils } from "@nimiq/utils";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
-import { db, pg } from "../src/database";
 import * as schema from "../db/schema";
+import { db, pg } from "../src/database";
 
 const prestakingTransactions = await db.query.prestakingTransactions.findMany({
 	with: {

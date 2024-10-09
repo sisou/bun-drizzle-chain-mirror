@@ -128,7 +128,7 @@ function connectWS() {
 		if ("message" in e) {
 			console.error(`Websocket ERROR: ${e.message}`);
 		} else {
-			console.error(`Websocket ERROR: Generic error`);
+			console.error("Websocket ERROR: Generic error");
 		}
 	};
 	ws.onclose = function() {
