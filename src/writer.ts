@@ -257,7 +257,7 @@ export async function writeBlocks(
 					// Try decoding data as utf-8 and check if it is a valid human-readable address
 					let dataDecoded: string | undefined;
 					try {
-						dataDecoded = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.from(tx.data, "hex"));
+						dataDecoded = new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array(Buffer.from(tx.data, "hex")));
 					} catch (e) {}
 					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
 						// Handle validator deposit transaction
@@ -287,7 +287,7 @@ export async function writeBlocks(
 					// Try decoding data as utf-8 and check if it is a valid human-readable address
 					let dataDecoded: string | undefined;
 					try {
-						dataDecoded = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.from(tx.data, "hex"));
+						dataDecoded = new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array(Buffer.from(tx.data, "hex")));
 					} catch (e) {}
 					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
 						const stakerAddress = tx.fromAddress;
