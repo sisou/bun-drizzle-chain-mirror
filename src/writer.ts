@@ -21,6 +21,7 @@ import {
 import { db } from "./database";
 import {
 	BURN_ADDRESS,
+	getPoolAddressesAtBlockHeight,
 	MIN_DELEGATION,
 	PRESTAKING_END_HEIGHT,
 	PRESTAKING_START_HEIGHT,
@@ -252,10 +253,26 @@ export async function writeBlocks(
 
 							const validatorStakeRatio = Math.min(validatorStakeRatioNow, validatorStakeRatioBefore);
 
+							let isUnderdogPool: boolean | undefined;
+							if (validatorStakeRatio >= 0.1) {
+								const isUnderdogPoolNow = isUnderdogPoolAtBlockHeight(
+									stakingContractNow,
+									validatorAddress,
+									block.number - 1,
+								);
+								const isUnderdogPoolBefore = isUnderdogPoolAtBlockHeight(
+									stakingContractBefore,
+									validatorAddress,
+									block.number - 2,
+								);
+								isUnderdogPool = isUnderdogPoolNow || isUnderdogPoolBefore;
+							}
+
 							prestakingTransactionEntries.push({
 								transaction_hash: tx.hash,
 								staker_address: stakerAddress,
 								validator_stake_ratio: validatorStakeRatio,
+								is_underdog_pool: isUnderdogPool,
 							});
 						}
 					}
@@ -551,4 +568,14 @@ async function getStakingContractAtBlockHeight(height: number) {
 			0,
 		),
 	};
+}
+
+function isUnderdogPoolAtBlockHeight(stakingContract: StakingContract, address: string, height: number) {
+	const poolAddresses = getPoolAddressesAtBlockHeight(height);
+
+	const pools = stakingContract.validators
+		.filter(({ address }) => poolAddresses.includes(address))
+		.sort((a, b) => (a.deposit + a.delegatedStake) - (b.deposit + b.delegatedStake));
+
+	return pools[0].address === address;
 }

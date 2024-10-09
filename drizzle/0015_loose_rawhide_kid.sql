@@ -1,0 +1,1 @@
+ALTER TABLE "prestaking_transactions" ADD COLUMN "is_underdog_pool" boolean;

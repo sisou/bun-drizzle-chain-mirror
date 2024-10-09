@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
 	bigint,
+	boolean,
 	char,
 	customType,
 	index,
@@ -247,6 +248,7 @@ export const prestakingTransactions = pgTable("prestaking_transactions", {
 		onDelete: "cascade",
 	}),
 	validator_stake_ratio: real("validator_stake_ratio").notNull(),
+	is_underdog_pool: boolean("is_underdog_pool"),
 }, (table) => ({
 	staker_address_idx: index("staker_address_idx").on(table.staker_address),
 }));

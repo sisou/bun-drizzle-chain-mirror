@@ -1,15 +1,20 @@
 /**
- * This script goes through all prestaking_transactions and calculates the minimum validatorStakeRatio between the
- * staking contract data at the last and second-last block before the transaction.
- * It then updates the database with the new value.
+ * This script goes through all prestaking_transactions that have a higher validator_stake_ratio than 0.1 and checks
+ * if the validator that was staked with is a pool and if that pool was the smallest pool at the time,
+ * in which case the transactions qualifies as an underdog transaction.
  */
 
 import { ValidationUtils } from "@nimiq/utils";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, isNull } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { db, pg } from "../src/database";
+import { getPoolAddressesAtBlockHeight } from "../src/lib/prestaking";
 
 const prestakingTransactions = await db.query.prestakingTransactions.findMany({
+	where: and(
+		gte(schema.prestakingTransactions.validator_stake_ratio, 0.1),
+		isNull(schema.prestakingTransactions.is_underdog_pool),
+	),
 	with: {
 		transaction: true,
 	},
@@ -48,44 +53,21 @@ for (const tx of prestakingTransactions) {
 	);
 	const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
 
-	const stakingContractNow = await getStakingContractAtBlockHeight(transaction.block_height - 1);
-	const stakingContractBefore = await getStakingContractAtBlockHeight(transaction.block_height - 2);
+	const poolIsUnderdogNow = await isUnderdogPoolAtBlockHeight(validatorAddress, transaction.block_height - 1);
+	const poolWasUnderdogBefore = await isUnderdogPoolAtBlockHeight(validatorAddress, transaction.block_height - 2);
 
-	const validatorNow = stakingContractNow.validators.find(validator => validator.address === validatorAddress)
-		|| { address: validatorAddress, deposit: 0, delegatedStake: 0 };
-	const validatorBefore = stakingContractBefore.validators.find(validator => validator.address === validatorAddress)
-		|| { address: validatorAddress, deposit: 0, delegatedStake: 0 };
+	const poolIsUnderdog = poolIsUnderdogNow || poolWasUnderdogBefore;
 
-	const validatorStakeRatioNow = (validatorNow.deposit + validatorNow.delegatedStake) / stakingContractNow.totalStake;
-	const validatorStakeRatioBefore = (validatorBefore.deposit + validatorBefore.delegatedStake)
-		/ stakingContractBefore.totalStake;
-
-	const validatorStakeRatio = Math.min(validatorStakeRatioNow, validatorStakeRatioBefore);
-
-	const dbSignificantDigits = tx.validator_stake_ratio.toString(10).replace(/^0\./, "").length;
-
-	const stakeRatioWithSameSignificantDigits = Math.round(validatorStakeRatio * 10 ** dbSignificantDigits)
-		/ 10 ** dbSignificantDigits;
-
-	const changesUnderdogStatus = (tx.validator_stake_ratio < 0.1 && validatorStakeRatio >= 0.1)
-		|| (tx.validator_stake_ratio >= 0.1 && validatorStakeRatio < 0.1);
-
-	const diff = stakeRatioWithSameSignificantDigits - tx.validator_stake_ratio;
-
-	if (Math.abs(diff) > 10e-3 || changesUnderdogStatus) {
-		const res = await db
-			.update(schema.prestakingTransactions)
-			.set({ validator_stake_ratio: validatorStakeRatio })
-			.where(eq(schema.prestakingTransactions.transaction_hash, transaction.hash))
-			.returning({ hash: schema.prestakingTransactions.transaction_hash });
-		console.log(
-			"Updated transaction",
-			res[0].hash,
-			tx.validator_stake_ratio,
-			stakeRatioWithSameSignificantDigits,
-			diff,
-		);
-	}
+	const res = await db
+		.update(schema.prestakingTransactions)
+		.set({ is_underdog_pool: poolIsUnderdog })
+		.where(eq(schema.prestakingTransactions.transaction_hash, transaction.hash))
+		.returning({ hash: schema.prestakingTransactions.transaction_hash });
+	console.log(
+		"Updated transaction",
+		transaction.hash, // res[0].hash,
+		poolIsUnderdog,
+	);
 }
 
 console.log("Processed", count, "pre-staking transactions");
@@ -183,4 +165,15 @@ async function getStakingContractAtBlockHeight(height: number) {
 			0,
 		),
 	};
+}
+
+async function isUnderdogPoolAtBlockHeight(address: string, height: number) {
+	const stakingContract = await getStakingContractAtBlockHeight(height);
+	const poolAddresses = getPoolAddressesAtBlockHeight(height);
+
+	const pools = stakingContract.validators
+		.filter(({ address }) => poolAddresses.includes(address))
+		.sort((a, b) => (a.deposit + a.delegatedStake) - (b.deposit + b.delegatedStake));
+
+	return pools[0].address === address;
 }
