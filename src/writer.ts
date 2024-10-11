@@ -491,48 +491,65 @@ type DbValidator = {
 	}[];
 };
 
-let validators: DbValidator[] | undefined;
+let cache: {
+	validators: DbValidator[];
+	chainHeight: number;
+} | undefined;
 
 async function getValidators() {
-	if (!validators) {
-		validators = await db.query.validatorRegistrations.findMany({
-			where: and(
-				isNotNull(validatorRegistrations.transaction_01),
-				isNotNull(validatorRegistrations.transaction_02),
-				isNotNull(validatorRegistrations.transaction_03),
-				isNotNull(validatorRegistrations.transaction_04),
-				isNotNull(validatorRegistrations.transaction_05),
-				isNotNull(validatorRegistrations.transaction_06),
-				isNotNull(validatorRegistrations.deposit_transaction),
-			),
-			columns: {
-				address: true,
-			},
-			with: {
-				deposit_transaction: {
-					columns: {
-						value: true,
-					},
+	const headBlock = await db.query.blocks.findFirst({
+		columns: {
+			height: true,
+		},
+		orderBy: desc(blocks.height),
+	});
+	if (!headBlock) {
+		throw new Error("No blocks found in database");
+	}
+
+	const validators = await db.query.validatorRegistrations.findMany({
+		where: and(
+			isNotNull(validatorRegistrations.transaction_01),
+			isNotNull(validatorRegistrations.transaction_02),
+			isNotNull(validatorRegistrations.transaction_03),
+			isNotNull(validatorRegistrations.transaction_04),
+			isNotNull(validatorRegistrations.transaction_05),
+			isNotNull(validatorRegistrations.transaction_06),
+			isNotNull(validatorRegistrations.deposit_transaction),
+		),
+		columns: {
+			address: true,
+		},
+		with: {
+			deposit_transaction: {
+				columns: {
+					value: true,
 				},
-				prestakers: {
-					columns: {},
-					with: {
-						transactions: {
-							columns: {},
-							with: {
-								transaction: {
-									columns: {
-										block_height: true,
-										value: true,
-									},
+			},
+			prestakers: {
+				columns: {},
+				with: {
+					transactions: {
+						columns: {},
+						with: {
+							transaction: {
+								columns: {
+									block_height: true,
+									value: true,
 								},
 							},
 						},
 					},
 				},
 			},
-		});
-	}
+		},
+	});
+
+	cache = {
+		validators,
+		chainHeight: headBlock.height,
+	};
+
 	return validators;
 }
 
@@ -548,7 +565,7 @@ type StakingContract = {
 };
 
 async function getStakingContractAtBlockHeight(height: number): Promise<StakingContract> {
-	const validators = await getValidators();
+	const validators = cache && height <= cache.chainHeight ? cache.validators : await getValidators();
 	const validatorStakes: Validator[] = validators.map(({ address, deposit_transaction, prestakers }) => {
 		if (!deposit_transaction) {
 			return {
