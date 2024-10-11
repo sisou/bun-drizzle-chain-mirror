@@ -5,13 +5,20 @@
  */
 
 import { ValidationUtils } from "@nimiq/utils";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, isNotNull } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { db, pg } from "../src/database";
 
 const prestakingTransactions = await db.query.prestakingTransactions.findMany({
 	with: {
-		transaction: true,
+		transaction: {
+			columns: {
+				hash: true,
+				block_height: true,
+				date: true,
+				recipient_data: true,
+			},
+		},
 	},
 });
 
@@ -36,9 +43,9 @@ let cache: {
 let count = 0;
 for (const tx of prestakingTransactions) {
 	count += 1;
-	if (count % 100 === 0) {
-		console.log("At tx nr.", count, "/", prestakingTransactions.length);
-	}
+	// if (count % 100 === 0) {
+	// 	console.log("At tx nr.", count, "/", prestakingTransactions.length);
+	// }
 
 	const transaction = tx.transaction;
 	if (!transaction || !transaction.block_height) continue;
@@ -72,18 +79,20 @@ for (const tx of prestakingTransactions) {
 
 	const diff = stakeRatioWithSameSignificantDigits - tx.validator_stake_ratio;
 
-	if (Math.abs(diff) > 10e-3 || changesUnderdogStatus) {
-		const res = await db
-			.update(schema.prestakingTransactions)
-			.set({ validator_stake_ratio: validatorStakeRatio })
-			.where(eq(schema.prestakingTransactions.transaction_hash, transaction.hash))
-			.returning({ hash: schema.prestakingTransactions.transaction_hash });
+	if (changesUnderdogStatus) {
+		// await db
+		// 	.update(schema.prestakingTransactions)
+		// 	.set({
+		// 		validator_stake_ratio: validatorStakeRatio,
+		// 		...(validatorStakeRatio < 0.1 ? { is_underdog_pool: null } : {}),
+		// 	})
+		// 	.where(eq(schema.prestakingTransactions.transaction_hash, transaction.hash));
 		console.log(
 			"Updated transaction",
-			res[0].hash,
+			transaction.date, // res[0].hash,
 			tx.validator_stake_ratio,
 			stakeRatioWithSameSignificantDigits,
-			diff,
+			// changesUnderdogStatus,
 		);
 	}
 }
@@ -134,6 +143,7 @@ async function getStakingContract() {
 								columns: {
 									block_height: true,
 									value: true,
+									date: true,
 								},
 							},
 						},
@@ -142,6 +152,12 @@ async function getStakingContract() {
 			},
 		},
 	});
+
+	for (const { prestakers } of validators) {
+		for (const { transactions } of prestakers) {
+			transactions.sort((a, b) => (a.transaction.block_height || Infinity) - (b.transaction.block_height || Infinity));
+		}
+	}
 
 	return {
 		validators,
@@ -163,7 +179,9 @@ async function getStakingContractAtBlockHeight(height: number) {
 		const prestake = prestakers.reduce((total, { transactions }) => {
 			let hadValidTransaction = false;
 			return total + transactions.reduce((total, { transaction }) => {
-				if (transaction.block_height! > height) return total;
+				if (!transaction.block_height || transaction.block_height > height) {
+					return total;
+				}
 				hadValidTransaction = hadValidTransaction || transaction.value >= 100e5;
 				return total + (hadValidTransaction ? transaction.value : 0);
 			}, 0);

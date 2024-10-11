@@ -545,6 +545,12 @@ async function getValidators() {
 		},
 	});
 
+	for (const { prestakers } of validators) {
+		for (const { transactions } of prestakers) {
+			transactions.sort((a, b) => (a.transaction.block_height || Infinity) - (b.transaction.block_height || Infinity));
+		}
+	}
+
 	cache = {
 		validators,
 		chainHeight: headBlock.height,
@@ -582,7 +588,7 @@ async function getStakingContractAtBlockHeight(height: number): Promise<StakingC
 		const prestake = prestakers.reduce((total, { transactions }) => {
 			let hadValidTransaction = false;
 			return total + transactions.reduce((total, { transaction }) => {
-				if (transaction.block_height && transaction.block_height > height) return total;
+				if (!transaction.block_height || transaction.block_height > height) return total;
 				hadValidTransaction = hadValidTransaction || transaction.value >= 100e5;
 				return total + (hadValidTransaction ? transaction.value : 0);
 			}, 0);

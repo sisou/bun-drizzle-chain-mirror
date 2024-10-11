@@ -5,18 +5,27 @@
  */
 
 import { ValidationUtils } from "@nimiq/utils";
-import { and, desc, eq, gte, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, gte, isNotNull } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { db, pg } from "../src/database";
 import { getPoolAddressesAtBlockHeight } from "../src/lib/prestaking";
 
 const prestakingTransactions = await db.query.prestakingTransactions.findMany({
+	columns: {
+		is_underdog_pool: true,
+	},
 	where: and(
 		gte(schema.prestakingTransactions.validator_stake_ratio, 0.1),
-		isNull(schema.prestakingTransactions.is_underdog_pool),
 	),
 	with: {
-		transaction: true,
+		transaction: {
+			columns: {
+				hash: true,
+				block_height: true,
+				date: true,
+				recipient_data: true,
+			},
+		},
 	},
 });
 
@@ -41,9 +50,9 @@ let cache: {
 let count = 0;
 for (const tx of prestakingTransactions) {
 	count += 1;
-	if (count % 100 === 0) {
-		console.log("At tx nr.", count, "/", prestakingTransactions.length);
-	}
+	// if (count % 100 === 0) {
+	// 	console.log("At tx nr.", count, "/", prestakingTransactions.length);
+	// }
 
 	const transaction = tx.transaction;
 	if (!transaction || !transaction.block_height) continue;
@@ -58,16 +67,17 @@ for (const tx of prestakingTransactions) {
 
 	const poolIsUnderdog = poolIsUnderdogNow || poolWasUnderdogBefore;
 
-	const res = await db
-		.update(schema.prestakingTransactions)
-		.set({ is_underdog_pool: poolIsUnderdog })
-		.where(eq(schema.prestakingTransactions.transaction_hash, transaction.hash))
-		.returning({ hash: schema.prestakingTransactions.transaction_hash });
-	console.log(
-		"Updated transaction",
-		transaction.hash, // res[0].hash,
-		poolIsUnderdog,
-	);
+	if (poolIsUnderdog !== tx.is_underdog_pool) {
+		// await db
+		// 	.update(schema.prestakingTransactions)
+		// 	.set({ is_underdog_pool: poolIsUnderdog })
+		// 	.where(eq(schema.prestakingTransactions.transaction_hash, transaction.hash));
+		console.log(
+			"Updated transaction",
+			transaction.date, // res[0].hash,
+			poolIsUnderdog,
+		);
+	}
 }
 
 console.log("Processed", count, "pre-staking transactions");
@@ -116,6 +126,7 @@ async function getStakingContract() {
 								columns: {
 									block_height: true,
 									value: true,
+									date: true,
 								},
 							},
 						},
@@ -124,6 +135,12 @@ async function getStakingContract() {
 			},
 		},
 	});
+
+	for (const { prestakers } of validators) {
+		for (const { transactions } of prestakers) {
+			transactions.sort((a, b) => (a.transaction.block_height || Infinity) - (b.transaction.block_height || Infinity));
+		}
+	}
 
 	return {
 		validators,
@@ -145,7 +162,7 @@ async function getStakingContractAtBlockHeight(height: number) {
 		const prestake = prestakers.reduce((total, { transactions }) => {
 			let hadValidTransaction = false;
 			return total + transactions.reduce((total, { transaction }) => {
-				if (transaction.block_height! > height) return total;
+				if (!transaction.block_height || transaction.block_height > height) return total;
 				hadValidTransaction = hadValidTransaction || transaction.value >= 100e5;
 				return total + (hadValidTransaction ? transaction.value : 0);
 			}, 0);
