@@ -2,13 +2,13 @@ import { relations } from "drizzle-orm";
 import {
 	bigint,
 	boolean,
-	char,
 	customType,
 	index,
 	integer,
 	pgTable,
 	real,
 	smallint,
+	text,
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -32,7 +32,7 @@ export const blocks = pgTable("blocks", {
 	height: integer("height").primaryKey(),
 	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }).notNull(),
 	hash: bytea("hash").notNull(),
-	creator_address: char("creator_address", { length: 44 }).notNull(),
+	creator_address: text("creator_address").notNull(),
 	transaction_count: integer("transaction_count").notNull(),
 	value: bigint("value", { mode: "number" }).notNull(),
 	fees: bigint("fees", { mode: "number" }).notNull(),
@@ -55,7 +55,7 @@ export const blocksRelations = relations(blocks, ({ many, one }) => ({
 }));
 
 export const accounts = pgTable("accounts", {
-	address: char("address", { length: 44 }).primaryKey(),
+	address: text("address").primaryKey(),
 	type: integer("type").notNull(),
 	balance: bigint("balance", { mode: "number" }).notNull(),
 	first_seen: integer("first_seen").references(() => blocks.height, { onDelete: "cascade" }),
@@ -94,8 +94,8 @@ export const accountsRelations = relations(accounts, ({ many, one }) => ({
 }));
 
 export const vestingOwners = pgTable("vesting_owners", {
-	address: char("address", { length: 44 }).primaryKey().references(() => accounts.address, { onDelete: "cascade" }),
-	owner: char("owner", { length: 44 }).notNull(),
+	address: text("address").primaryKey().references(() => accounts.address, { onDelete: "cascade" }),
+	owner: text("owner").notNull(),
 }, (table) => ({
 	address_idx: index("address_idx").on(table.address),
 	owner_idx: index("owner_idx").on(table.owner),
@@ -118,10 +118,10 @@ export const transactions = pgTable("transactions", {
 	hash: bytea("hash").primaryKey(),
 	block_height: integer("block_height").references(() => blocks.height, { onDelete: "cascade" }),
 	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }),
-	sender_address: char("sender_address", { length: 44 }).notNull(),
+	sender_address: text("sender_address").notNull(),
 	sender_type: smallint("sender_type").notNull(),
 	sender_data: bytea("sender_data"),
-	recipient_address: char("recipient_address", { length: 44 }).notNull(),
+	recipient_address: text("recipient_address").notNull(),
 	recipient_type: smallint("recipient_type").notNull(),
 	recipient_data: bytea("recipient_data"),
 	value: bigint("value", { mode: "number" }).notNull(),
@@ -156,7 +156,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 }));
 
 export const validatorRegistrations = pgTable("validator_registrations", {
-	address: char("address", { length: 44 }).primaryKey(),
+	address: text("address").primaryKey(),
 	transaction_01: bytea("transaction_01").references(() => transactions.hash, { onDelete: "set null" }),
 	transaction_02: bytea("transaction_02").references(() => transactions.hash, { onDelete: "set null" }),
 	transaction_03: bytea("transaction_03").references(() => transactions.hash, { onDelete: "set null" }),
@@ -216,8 +216,8 @@ export const validatorRegistrationsRelatations = relations(validatorRegistration
 }));
 
 export const prestakers = pgTable("prestakers", {
-	address: char("address", { length: 44 }).primaryKey(),
-	delegation: char("delegation", { length: 44 }).notNull(),
+	address: text("address").primaryKey(),
+	delegation: text("delegation").notNull(),
 	first_transaction_height: integer("first_transaction_height").notNull().references(() => blocks.height, {
 		onDelete: "cascade",
 	}),
@@ -244,7 +244,7 @@ export const prestakingTransactions = pgTable("prestaking_transactions", {
 	transaction_hash: bytea("transaction_hash").notNull().unique().references(() => transactions.hash, {
 		onDelete: "cascade",
 	}),
-	staker_address: char("staker_address", { length: 44 }).notNull().references(() => prestakers.address, {
+	staker_address: text("staker_address").notNull().references(() => prestakers.address, {
 		onDelete: "cascade",
 	}),
 	validator_stake_ratio: real("validator_stake_ratio").notNull(),
