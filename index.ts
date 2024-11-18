@@ -1,7 +1,13 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { blocks, transactions } from "./db/schema";
 import { db } from "./src/database";
-import { blockNumber, getBlockByNumber, getTransactionByHash, mempoolContent, type Transaction } from "./src/rpc";
+import {
+	blockNumber as powBlockNumber,
+	getBlockByNumber as getPoWBlockByNumber,
+	getTransactionByHash as getPoWTransactionByHash,
+	mempoolContent as powMempoolContent,
+	type Transaction as PoWTransaction,
+} from "./src/pow/rpc";
 import { writeBlocks, writeMempoolTransactions } from "./src/writer";
 
 // Step 1: Catch up to the chain
@@ -17,7 +23,7 @@ do {
 	const dbHeightResult = await db.select({ height: blocks.height }).from(blocks).orderBy(desc(blocks.height)).limit(1);
 	if (dbHeightResult.length) dbHeight = dbHeightResult[0].height;
 
-	chainHeight = await blockNumber();
+	chainHeight = await powBlockNumber();
 	console.info(`DB height: #${dbHeight} - Chain height: #${chainHeight}: ${chainHeight - dbHeight} blocks behind`);
 
 	// Only catch up until 100 blocks behind, the rest will be done with polling below.
@@ -38,13 +44,13 @@ console.log(`Deleted ${deleted.count} non-included transactions`);
 // (Also handle missing blocks in between.)
 
 async function pollChain() {
-	const currentHeight = await blockNumber();
+	const currentHeight = await powBlockNumber();
 	// Do not handle reorgs of the current block
 	if (currentHeight === dbHeight) return;
 
 	// Find nearest common ancestor
 	const firstNewHeight = Math.min(dbHeight + 1, currentHeight);
-	let firstNewBlock = await getBlockByNumber(firstNewHeight, false);
+	let firstNewBlock = await getPoWBlockByNumber(firstNewHeight, false);
 	let commonAncestorHeight = firstNewHeight - 1;
 	let forked = firstNewHeight <= dbHeight;
 	while (commonAncestorHeight) {
@@ -53,7 +59,7 @@ async function pollChain() {
 		).limit(1).then(res => res.at(0)?.hash);
 		if (ancestorHash === firstNewBlock.parentHash) break;
 		// Fetch parent block
-		firstNewBlock = await getBlockByNumber(commonAncestorHeight, false);
+		firstNewBlock = await getPoWBlockByNumber(commonAncestorHeight, false);
 		forked = true;
 		commonAncestorHeight--;
 	}
@@ -72,7 +78,7 @@ async function pollChain() {
 }
 
 async function pollMempool() {
-	const transactionHashes = await mempoolContent(false);
+	const transactionHashes = await powMempoolContent(false);
 
 	const newHashes = transactionHashes.filter(hash => !mempool.has(hash));
 	if (newHashes.length) console.log("Mempool new hashes:", newHashes);
@@ -81,8 +87,8 @@ async function pollMempool() {
 
 	// For new hashes, fetch transactions and add to database
 	const newTxs = (await Promise.all(
-		newHashes.map((hash) => getTransactionByHash(hash)),
-	)).filter(Boolean) as Transaction[];
+		newHashes.map((hash) => getPoWTransactionByHash(hash)),
+	)).filter(Boolean) as PoWTransaction[];
 	await writeMempoolTransactions(newTxs);
 	for (const tx of newTxs) mempool.add(tx.hash);
 

@@ -29,9 +29,13 @@ import {
 	REGISTRATION_START_HEIGHT,
 	VALIDATOR_DEPOSIT,
 } from "./lib/prestaking";
-import { getAccount, getBlockByNumber, type Transaction } from "./rpc";
+import {
+	getAccount as getPoWAccount,
+	getBlockByNumber as getPoWBlockByNumber,
+	type Transaction as PoWTransaction,
+} from "./pow/rpc";
 
-function toTransactionInsert(tx: Transaction, blockNumber?: number): TransactionInsert {
+function toTransactionInsert(tx: PoWTransaction, blockNumber?: number): TransactionInsert {
 	return {
 		date: tx.timestamp ? new Date(tx.timestamp * 1e3) : undefined,
 		hash: tx.hash,
@@ -80,7 +84,7 @@ export async function writeBlocks(
 
 	for (let i = fromBlock; i <= toBlock; i++) {
 		// console.info(`Fetching block #${i}`);
-		const block = await getBlockByNumber(i, true);
+		const block = await getPoWBlockByNumber(i, true);
 
 		const [value, fees] = block.transactions.reduce(([value, fees], tx) => {
 			value += tx.value;
@@ -291,7 +295,7 @@ export async function writeBlocks(
 		// Fetch balances
 		await Promise.all(
 			Array.from(accountEntries.keys()).map(async (address) => {
-				const account = await getAccount(address);
+				const account = await getPoWAccount(address);
 				// biome-ignore lint/style/noNonNullAssertion: iteration is over keys of accountEntries
 				accountEntries.get(address)!.balance = account.balance;
 			}),
@@ -309,7 +313,7 @@ export async function writeBlocks(
 					}
 					if (!accountEntries.has(address)) {
 						// Update balance for accounts that are not in the fork
-						const account = await getAccount(address);
+						const account = await getPoWAccount(address);
 						accountEntries.set(address, {
 							...entry,
 							balance: account.balance,
@@ -472,7 +476,7 @@ export async function writeBlocks(
 	}
 }
 
-export async function writeMempoolTransactions(txs: Transaction[]) {
+export async function writeMempoolTransactions(txs: PoWTransaction[]) {
 	if (!txs.length) return;
 	const txEntries = txs.map((tx) => toTransactionInsert(tx));
 	await db.insert(transactions).values(txEntries).onConflictDoNothing();
