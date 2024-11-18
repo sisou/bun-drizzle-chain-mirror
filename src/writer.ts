@@ -29,6 +29,7 @@ import {
 	REGISTRATION_START_HEIGHT,
 	VALIDATOR_DEPOSIT,
 } from "./lib/prestaking";
+import { TRANSITION_BLOCK } from "./lib/prestaking";
 import {
 	getAccount as getPoWAccount,
 	getBlockByNumber as getPoWBlockByNumber,
@@ -85,6 +86,7 @@ export async function writeBlocks(
 	for (let i = fromBlock; i <= toBlock; i++) {
 		// console.info(`Fetching block #${i}`);
 		const block = await getPoWBlockByNumber(i, true);
+		const isTransitionBlock = block.number === TRANSITION_BLOCK;
 
 		const [value, fees] = block.transactions.reduce(([value, fees], tx) => {
 			value += tx.value;
@@ -111,9 +113,9 @@ export async function writeBlocks(
 			address: block.minerAddress,
 			type: 0,
 			balance: 0,
-			first_seen: block.number,
+			first_seen: block.number === TRANSITION_BLOCK ? block.number - 1 : block.number,
 			last_sent: undefined,
-			last_received: block.number,
+			last_received: block.number === TRANSITION_BLOCK ? block.number - 1 : block.number,
 		});
 
 		const vestingOwnerEntries = new Map<string, VestingOwnerInsert>();
@@ -363,7 +365,9 @@ export async function writeBlocks(
 		}
 
 		await db.transaction(async (trx) => {
-			await trx.insert(blocks).values(blockEntry);
+			if (!isTransitionBlock) {
+				await trx.insert(blocks).values(blockEntry);
+			}
 
 			if (accountEntries.size) {
 				// Accounts must be entered after blocks, so that new blocks are already in the database
@@ -399,7 +403,7 @@ export async function writeBlocks(
 					});
 			}
 
-			if (txEntries.length) {
+			if (txEntries.length && !isTransitionBlock) {
 				const tableName = getTableConfig(transactions).name;
 				await trx.insert(transactions).values(txEntries).onConflictDoUpdate({
 					target: transactions.hash,

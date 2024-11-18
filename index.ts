@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { blocks, transactions } from "./db/schema";
 import { db } from "./src/database";
+import { TRANSITION_BLOCK } from "./src/lib/prestaking";
 import {
 	blockNumber as powBlockNumber,
 	getBlockByNumber as getPoWBlockByNumber,
@@ -23,7 +24,7 @@ do {
 	const dbHeightResult = await db.select({ height: blocks.height }).from(blocks).orderBy(desc(blocks.height)).limit(1);
 	if (dbHeightResult.length) dbHeight = dbHeightResult[0].height;
 
-	chainHeight = await powBlockNumber();
+	chainHeight = Math.min(await powBlockNumber(), TRANSITION_BLOCK);
 	console.info(`DB height: #${dbHeight} - Chain height: #${chainHeight}: ${chainHeight - dbHeight} blocks behind`);
 
 	// Only catch up until 100 blocks behind, the rest will be done with polling below.
@@ -43,10 +44,13 @@ console.log(`Deleted ${deleted.count} non-included transactions`);
 // Step 2: Start listening for blocks live
 // (Also handle missing blocks in between.)
 
+/**
+ * Returns `true` if the chain is written until the transition block, `false` otherwise.
+ */
 async function pollChain() {
-	const currentHeight = await powBlockNumber();
+	const currentHeight = Math.min(await powBlockNumber(), TRANSITION_BLOCK);
 	// Do not handle reorgs of the current block
-	if (currentHeight === dbHeight) return;
+	if (currentHeight === dbHeight) return false;
 
 	// Find nearest common ancestor
 	const firstNewHeight = Math.min(dbHeight + 1, currentHeight);
@@ -75,6 +79,8 @@ async function pollChain() {
 	} catch (error) {
 		console.error("Failed to send WS update:", error);
 	}
+
+	return dbHeight === TRANSITION_BLOCK;
 }
 
 async function pollMempool() {
@@ -106,7 +112,15 @@ async function pollMempool() {
 }
 
 async function poll() {
-	await pollChain();
+	const done = await pollChain();
+	if (done) {
+		console.log(`Transition block #${TRANSITION_BLOCK} reached, stopping!`);
+		// Delete all non-included transactions
+		const deleted = await db.delete(transactions).where(isNull(transactions.date));
+		console.log(`Deleted ${deleted.count} pending transactions`);
+		return;
+	}
+
 	await pollMempool();
 	// Call itself again after 1s (waiting 1s _between_ polls)
 	setTimeout(poll, 1e3);
