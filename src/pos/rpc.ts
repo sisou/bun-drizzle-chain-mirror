@@ -54,11 +54,11 @@ type StakingAccount = BaseAccount & {
 type Account = BasicAccount | VestingAccount | HtlcAccount | StakingAccount;
 
 export async function getAccount(address: string): Promise<Account> {
-	return rpc<Account>("getAccounts", [address]);
+	return rpc<Account>("getAccountByAddress", address);
 }
 
 export async function sendTransaction(transaction: string): Promise<string> {
-	return rpc<string>("sendRawTransaction", [transaction]);
+	return rpc<string>("sendRawTransaction", transaction);
 }
 
 export async function blockNumber(): Promise<number> {
@@ -91,11 +91,11 @@ export type Transaction = {
 export async function mempoolContent(fullTxs: false): Promise<string[]>;
 export async function mempoolContent(fullTxs: true): Promise<Transaction[]>;
 export async function mempoolContent(fullTxs: boolean): Promise<string[] | Transaction[]> {
-	return rpc<string[] | Transaction[]>("mempoolContent", [fullTxs]);
+	return rpc<string[] | Transaction[]>("mempoolContent", fullTxs);
 }
 
 export async function getTransactionByHash(hash: string): Promise<Transaction | null> {
-	return rpc<Transaction | null>("getTransactionByHash", [hash]);
+	return rpc<Transaction | null>("getTransactionByHash", hash);
 }
 
 type BaseBlock = {
@@ -173,12 +173,12 @@ export async function getBlockByNumber<WithTx extends boolean>(
 	number: number,
 	withTxs: WithTx,
 ): Promise<WithTx extends true ? BlockWithTxs : Block> {
-	return rpc<WithTx extends true ? BlockWithTxs : Block>("getBlockByNumber", [number, withTxs]);
+	return rpc<WithTx extends true ? BlockWithTxs : Block>("getBlockByNumber", number, withTxs);
 }
 
 let rpc_request_id = 0;
 
-async function rpc<Type>(method: string, params: (string | number | boolean)[] = []): Promise<Type> {
+async function rpc<Type>(method: string, ...params: (string | string[] | number | boolean)[]): Promise<Type> {
 	const rpc_url = process.env.POS_RPC_SERVER;
 	if (!rpc_url) throw new Error("POS_RPC_SERVER environment variable is not set");
 
@@ -210,23 +210,27 @@ async function rpc<Type>(method: string, params: (string | number | boolean)[] =
 				id: number;
 			}
 			& ({
-				result: Type;
+				result: {
+					data: Type;
+					metadata: unknown;
+				};
 			} | {
 				error: {
 					code: number;
 					message: string;
+					data: string;
 				};
 			})
 		>;
 	});
 
 	if ("error" in response) {
-		throw new Error(`RPC error: ${response.error.message}`);
+		throw new Error(`RPC error: ${response.error.message} - ${response.error.data}`);
 	}
 
 	if (response.id !== request_id) {
 		throw new Error("RPC response id does not match request id");
 	}
 
-	return response.result as Type;
+	return response.result.data as Type;
 }
