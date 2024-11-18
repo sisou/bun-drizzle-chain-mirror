@@ -56,7 +56,7 @@ export const blocks = pgTable("blocks", {
 	hash: bytea("hash"),
 	creator_address: text("creator_address"),
 	transaction_count: integer("transaction_count").notNull(),
-	inherent_count: integer("inherent_count").notNull().default(0),
+	inherent_count: integer("inherent_count").notNull(),
 	value: bigint("value", { mode: "number" }).notNull(),
 	fees: bigint("fees", { mode: "number" }).notNull(),
 	size: integer("size"),
@@ -175,7 +175,7 @@ export const transactions = pgTable("transactions", {
 	validity_start_height: integer("validity_start_height").notNull(),
 	flags: smallint("flags").notNull(),
 	proof: bytea("proof"),
-	related_addresses: text("related_addresses").array().notNull().default(sql.raw("'{}'")), // TODO: Go through PoW transactions and check for related addresses, e.g. signer !== sender
+	related_addresses: text("related_addresses").array().notNull(), // TODO: Go through PoW transactions and check for related addresses, e.g. signer !== sender
 }, (table) => ({
 	block_height_idx: index("block_height_idx").on(table.block_height),
 	date_idx: index("date_idx").on(table.date),
