@@ -627,5 +627,5 @@ function isUnderdogPoolAtBlockHeight(stakingContract: StakingContract, address: 
 		.filter(({ address }) => poolAddresses.includes(address))
 		.sort((a, b) => (a.deposit + a.delegatedStake) - (b.deposit + b.delegatedStake));
 
-	return pools[0].address === address;
+	return pools[0]?.address === address;
 }
