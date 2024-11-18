@@ -5,7 +5,7 @@ import { accounts, transactions, vestingOwners } from "./schema";
 
 type GenesisAccount = { address: string; type: Account.Type; creation_data: string | null };
 
-export async function postprocess(genesisAccounts: GenesisAccount[]) {
+export async function postprocess(genesisAccounts: GenesisAccount[], callback: () => void | Promise<void>) {
 	const [{ count: vestingOwnersCount }] = await db.select({ count: count() }).from(vestingOwners);
 	if (!vestingOwnersCount) {
 		console.log("Populating vesting owners table...");
@@ -67,6 +67,10 @@ export async function postprocess(genesisAccounts: GenesisAccount[]) {
 		}
 	} else {
 		console.log("Vesting owners table already populated");
+	}
+
+	if (callback) {
+		await callback();
 	}
 
 	console.log("Closing database");
