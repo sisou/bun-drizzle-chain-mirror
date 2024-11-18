@@ -1,34 +1,60 @@
-type Account =
+type BaseAccount = {
+	address: string;
+	balance: number;
+};
+
+type BasicAccount = BaseAccount & {
+	type: "basic";
+};
+
+type VestingAccount =
+	& BaseAccount
 	& {
-		id: string;
-		address: string;
-		balance: number;
-	}
-	& ({
-		type: 0;
-	} | {
-		type: 1;
+		type: "vesting";
 		owner: string;
-		ownerAddress: string;
-		vestingStart: number;
-		vestingStepBlocks: number;
 		vestingStepAmount: number;
 		vestingTotalAmount: number;
+	}
+	& ({
+		// Wrong types in RC5
+		vestingStart: number;
+		vestingStepBlocks: number;
 	} | {
-		type: 2;
-		sender: string;
-		senderAddress: string;
-		recipient: string;
-		recipientAddress: string;
-		hashRoot: string;
-		hashAlgorithm: number;
-		hashCount: number;
-		timeout: number;
-		totalAmount: number;
+		// Fixed in v1.0.0
+		/**
+		 * In milliseconds
+		 */
+		vestingStartTime: number;
+		/**
+		 * In milliseconds
+		 */
+		vestingTimeStep: number;
 	});
 
+type HtlcAccount = BaseAccount & {
+	type: "htlc";
+	sender: string;
+	recipient: string;
+	hashRoot: {
+		algorithm: "sha256" | "sha512";
+		hash: string;
+	};
+	hashCount: number;
+	/**
+	 * In milliseconds
+	 */
+	timeout: number;
+	totalAmount: number;
+};
+
+type StakingAccount = BaseAccount & {
+	type: "staking";
+};
+
+type Account = BasicAccount | VestingAccount | HtlcAccount | StakingAccount;
+
 export async function getAccount(address: string): Promise<Account> {
-	return rpc<Account>("getAccount", [address]);
+	return rpc<Account>("getAccounts", [address]);
 }
 
 export async function sendTransaction(transaction: string): Promise<string> {
@@ -36,28 +62,30 @@ export async function sendTransaction(transaction: string): Promise<string> {
 }
 
 export async function blockNumber(): Promise<number> {
-	return rpc<number>("blockNumber");
+	return rpc<number>("getBlockNumber");
 }
 
 export type Transaction = {
 	hash: string;
-	blockHash?: string;
 	blockNumber?: number;
+	/**
+	 * In milliseconds
+	 */
 	timestamp?: number;
 	confirmations: number;
 	from: string;
-	fromAddress: string;
 	fromType: number;
 	to: string;
-	toAddress: string;
 	toType: number;
 	value: number;
 	fee: number;
-	data: string | null;
-	proof: string | null;
+	senderData: string;
+	recipientData: string;
 	flags: number;
 	validityStartHeight: number;
+	proof: string;
 	networkId: number;
+	executionResult: boolean;
 };
 
 export async function mempoolContent(fullTxs: false): Promise<string[]>;
@@ -70,25 +98,74 @@ export async function getTransactionByHash(hash: string): Promise<Transaction | 
 	return rpc<Transaction | null>("getTransactionByHash", [hash]);
 }
 
-export type Block = {
-	number: number;
+type BaseBlock = {
 	hash: string;
-	pow: string;
-	parentHash: string;
-	nonce: number;
-	bodyHash: string;
-	accountsHash: string;
-	difficulty: number;
-	timestamp: number;
-	confirmations: number;
-	miner: string;
-	minerAddress: string;
-	extraData: string;
 	size: number;
-	transactions: string[];
+	batch: number;
+	epoch: number;
+	network: "MainAlbatross" | "TestAlbatross";
+	version: number;
+	number: number;
+	timestamp: number;
+	parentHash: string;
+	seed: string;
+	extraData: string;
+	stateHash: string;
+	bodyHash: string;
+	historyHash: string;
 };
 
-export type BlockWithTxs = Omit<Block, "transactions"> & {
+type MacroBlock =
+	& BaseBlock
+	& {
+		type: "macro";
+		parentElectionHash: string;
+		nextBatchInitialPunishedSet: number[];
+		justification: {
+			round: number;
+			sig: {
+				signature: {
+					signature: string;
+				};
+				signers: number[];
+			};
+		};
+	}
+	& ({
+		isElectionBlock: true;
+		interlink: string[];
+		slots: {
+			firstSlotNumber: number;
+			numSlots: number;
+			validator: string;
+			publicKey: string;
+		}[];
+	} | {
+		isElectionBlock: false;
+	});
+
+type MicroBlock = BaseBlock & {
+	type: "micro";
+	producer: {
+		slotNumber: number;
+		validator: string;
+		publicKey: string;
+	};
+	justification: {
+		micro: string;
+	} | {
+		skip: {
+			sig: {
+				signature: { signature: string };
+				signers: number[];
+			};
+		};
+	};
+};
+
+export type Block = MacroBlock | MicroBlock;
+
+export type BlockWithTxs = Block & {
 	transactions: Required<Transaction>[];
 };
 
@@ -102,11 +179,11 @@ export async function getBlockByNumber<WithTx extends boolean>(
 let rpc_request_id = 0;
 
 async function rpc<Type>(method: string, params: (string | number | boolean)[] = []): Promise<Type> {
-	const rpc_url = process.env.RPC_SERVER;
-	if (!rpc_url) throw new Error("RPC_SERVER environment variable is not set");
+	const rpc_url = process.env.POS_RPC_SERVER;
+	if (!rpc_url) throw new Error("POS_RPC_SERVER environment variable is not set");
 
-	const authorization_header = process.env.RPC_USERNAME || process.env.RPC_PASSWORD
-		? `Basic ${btoa(`${process.env.RPC_USERNAME}:${process.env.RPC_PASSWORD}`)}`
+	const authorization_header = process.env.POS_RPC_USERNAME || process.env.POS_RPC_PASSWORD
+		? `Basic ${btoa(`${process.env.POS_RPC_USERNAME}:${process.env.POS_RPC_PASSWORD}`)}`
 		: undefined;
 
 	const request_id = ++rpc_request_id;
