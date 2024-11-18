@@ -1,10 +1,12 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	bigint,
+	bigserial,
 	boolean,
 	customType,
 	index,
 	integer,
+	jsonb,
 	pgTable,
 	real,
 	smallint,
@@ -28,16 +30,37 @@ const bytea = customType<{ data: string; notNull: false; default: false }>({
 	},
 });
 
+/**
+ * The only fields we can know for past blocks that we cannot query anymore:
+ * - height (duh)
+ * - transaction_count
+ * - inherent_count
+ * - value
+ * - fees
+ *
+ * These fields we _can_ know when the block has transactions or inherents:
+ * - date
+ *
+ * These fields we can only know for current blocks:
+ * - hash
+ * - creator_address
+ * - size
+ * - extra_data
+ *
+ * These fields will not be populated in PoS:
+ * - difficulty
+ */
 export const blocks = pgTable("blocks", {
 	height: integer("height").primaryKey(),
-	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }).notNull(),
-	hash: bytea("hash").notNull(),
-	creator_address: text("creator_address").notNull(),
+	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }),
+	hash: bytea("hash"),
+	creator_address: text("creator_address"),
 	transaction_count: integer("transaction_count").notNull(),
+	inherent_count: integer("inherent_count").notNull().default(0),
 	value: bigint("value", { mode: "number" }).notNull(),
 	fees: bigint("fees", { mode: "number" }).notNull(),
-	size: integer("size").notNull(),
-	difficulty: real("difficulty").notNull(),
+	size: integer("size"),
+	difficulty: real("difficulty"),
 	extra_data: bytea("extra_data"),
 }, (table) => ({
 	block_hash_idx: uniqueIndex("block_hash_idx").on(table.hash),
@@ -48,9 +71,32 @@ export type BlockInsert = typeof blocks.$inferInsert;
 
 export const blocksRelations = relations(blocks, ({ many, one }) => ({
 	transactions: many(transactions),
+	inherents: many(inherents),
 	creator: one(accounts, {
 		fields: [blocks.creator_address],
 		references: [accounts.address],
+	}),
+	epochs: many(epochs),
+}));
+
+export const epochs = pgTable("epochs", {
+	number: integer("number").primaryKey(),
+	block_height: integer("block_height").notNull().references(() => blocks.height, { onDelete: "cascade" }),
+	elected_validators: text("elected_validators").array().notNull(),
+	validator_slots: integer("validator_slots").array().notNull(),
+	votes: integer("votes").notNull(),
+}, (table) => ({
+	epoch_block_height_idx: index("epoch_block_height_idx").on(table.block_height),
+	// epoch_block_date_idx: index("epoch_block_date_idx").on(table.block_date),
+	epoch_elected_validators_idx: index("epoch_elected_validators_idx").on(table.elected_validators),
+}));
+export type Epoch = typeof epochs.$inferSelect;
+export type EpochInsert = typeof epochs.$inferInsert;
+
+export const epochsRelations = relations(epochs, ({ one }) => ({
+	block: one(blocks, {
+		fields: [epochs.block_height],
+		references: [blocks.height],
 	}),
 }));
 
@@ -129,6 +175,7 @@ export const transactions = pgTable("transactions", {
 	validity_start_height: integer("validity_start_height").notNull(),
 	flags: smallint("flags").notNull(),
 	proof: bytea("proof"),
+	related_addresses: text("related_addresses").array().notNull().default(sql.raw("'{}'")), // TODO: Go through PoW transactions and check for related addresses, e.g. signer !== sender
 }, (table) => ({
 	block_height_idx: index("block_height_idx").on(table.block_height),
 	date_idx: index("date_idx").on(table.date),
@@ -154,6 +201,41 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 		relationName: "recipient",
 	}),
 }));
+
+/**
+ * Staking
+ */
+
+export const inherents = pgTable("inherents", {
+	id: bigserial("id", { mode: "bigint" }).primaryKey(),
+	type: text("type").notNull(),
+	block_height: integer("block_height").notNull().references(() => blocks.height, { onDelete: "cascade" }),
+	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }).notNull(),
+	validator_address: text("validator_address").notNull(), // .references(() => validators.address, { onDelete: "cascade" })
+	data: jsonb("data"),
+}, (table) => ({
+	inherent_type_idx: index("inherent_type_idx").on(table.type),
+	inherent_block_height_idx: index("inherent_block_height_idx").on(table.block_height),
+	// inherent_date_idx: index("inherent_date_idx").on(table.date),
+	inherent_validator_address_idx: index("inherent_validator_address_idx").on(table.validator_address),
+}));
+export type Inherent = typeof inherents.$inferSelect;
+export type InherentInsert = typeof inherents.$inferInsert;
+
+export const inherentsRelations = relations(inherents, ({ one, many }) => ({
+	block: one(blocks, {
+		fields: [inherents.block_height],
+		references: [blocks.height],
+	}),
+	validator: one(accounts, {
+		fields: [inherents.validator_address],
+		references: [accounts.address],
+	}),
+}));
+
+/**
+ * Prestaking
+ */
 
 export const validatorRegistrations = pgTable("validator_registrations", {
 	address: text("address").primaryKey(),

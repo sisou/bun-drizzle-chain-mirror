@@ -47,6 +47,7 @@ function toTransactionInsert(tx: Transaction, blockNumber?: number): Transaction
 		proof: tx.proof,
 		flags: tx.flags,
 		validity_start_height: tx.validityStartHeight,
+		related_addresses: [],
 	};
 }
 
@@ -95,6 +96,7 @@ export async function writeBlocks(
 			hash: block.hash,
 			creator_address: block.minerAddress,
 			transaction_count: block.transactions.length,
+			inherent_count: 0,
 			value,
 			fees,
 			size: block.size,

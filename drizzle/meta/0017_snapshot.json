@@ -1,0 +1,924 @@
+{
+  "id": "04ea2f0e-844a-45c2-9366-3644da7f08a1",
+  "prevId": "c2855a8d-8b3c-40f4-8976-69b1312e4ccf",
+  "version": "5",
+  "dialect": "pg",
+  "tables": {
+    "accounts": {
+      "name": "accounts",
+      "schema": "",
+      "columns": {
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "balance": {
+          "name": "balance",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_seen": {
+          "name": "first_seen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_sent": {
+          "name": "last_sent",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_received": {
+          "name": "last_received",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "first_seen_idx": {
+          "name": "first_seen_idx",
+          "columns": [
+            "first_seen"
+          ],
+          "isUnique": false
+        },
+        "last_sent_idx": {
+          "name": "last_sent_idx",
+          "columns": [
+            "last_sent"
+          ],
+          "isUnique": false
+        },
+        "last_received_idx": {
+          "name": "last_received_idx",
+          "columns": [
+            "last_received"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "accounts_first_seen_blocks_height_fk": {
+          "name": "accounts_first_seen_blocks_height_fk",
+          "tableFrom": "accounts",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "first_seen"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "accounts_last_sent_blocks_height_fk": {
+          "name": "accounts_last_sent_blocks_height_fk",
+          "tableFrom": "accounts",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "last_sent"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "accounts_last_received_blocks_height_fk": {
+          "name": "accounts_last_received_blocks_height_fk",
+          "tableFrom": "accounts",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "last_received"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "blocks": {
+      "name": "blocks",
+      "schema": "",
+      "columns": {
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "timestamp_ms": {
+          "name": "timestamp_ms",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hash": {
+          "name": "hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creator_address": {
+          "name": "creator_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_count": {
+          "name": "transaction_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "inherent_count": {
+          "name": "inherent_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "value": {
+          "name": "value",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fees": {
+          "name": "fees",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size": {
+          "name": "size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "difficulty": {
+          "name": "difficulty",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extra_data": {
+          "name": "extra_data",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "block_hash_idx": {
+          "name": "block_hash_idx",
+          "columns": [
+            "hash"
+          ],
+          "isUnique": true
+        },
+        "creator_address_idx": {
+          "name": "creator_address_idx",
+          "columns": [
+            "creator_address"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "epochs": {
+      "name": "epochs",
+      "schema": "",
+      "columns": {
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "block_height": {
+          "name": "block_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "elected_validators": {
+          "name": "elected_validators",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "validator_slots": {
+          "name": "validator_slots",
+          "type": "integer[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "votes": {
+          "name": "votes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "epoch_block_height_idx": {
+          "name": "epoch_block_height_idx",
+          "columns": [
+            "block_height"
+          ],
+          "isUnique": false
+        },
+        "epoch_elected_validators_idx": {
+          "name": "epoch_elected_validators_idx",
+          "columns": [
+            "elected_validators"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "epochs_block_height_blocks_height_fk": {
+          "name": "epochs_block_height_blocks_height_fk",
+          "tableFrom": "epochs",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "block_height"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "inherents": {
+      "name": "inherents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_height": {
+          "name": "block_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timestamp_ms": {
+          "name": "timestamp_ms",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "validator_address": {
+          "name": "validator_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "inherent_type_idx": {
+          "name": "inherent_type_idx",
+          "columns": [
+            "type"
+          ],
+          "isUnique": false
+        },
+        "inherent_block_height_idx": {
+          "name": "inherent_block_height_idx",
+          "columns": [
+            "block_height"
+          ],
+          "isUnique": false
+        },
+        "inherent_validator_address_idx": {
+          "name": "inherent_validator_address_idx",
+          "columns": [
+            "validator_address"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "inherents_block_height_blocks_height_fk": {
+          "name": "inherents_block_height_blocks_height_fk",
+          "tableFrom": "inherents",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "block_height"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "prestakers": {
+      "name": "prestakers",
+      "schema": "",
+      "columns": {
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "delegation": {
+          "name": "delegation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_transaction_height": {
+          "name": "first_transaction_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latest_transaction_height": {
+          "name": "latest_transaction_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "delegation_idx": {
+          "name": "delegation_idx",
+          "columns": [
+            "delegation"
+          ],
+          "isUnique": false
+        },
+        "first_transaction_height_idx": {
+          "name": "first_transaction_height_idx",
+          "columns": [
+            "first_transaction_height"
+          ],
+          "isUnique": false
+        },
+        "latest_transaction_height_idx": {
+          "name": "latest_transaction_height_idx",
+          "columns": [
+            "latest_transaction_height"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "prestakers_first_transaction_height_blocks_height_fk": {
+          "name": "prestakers_first_transaction_height_blocks_height_fk",
+          "tableFrom": "prestakers",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "first_transaction_height"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "prestakers_latest_transaction_height_blocks_height_fk": {
+          "name": "prestakers_latest_transaction_height_blocks_height_fk",
+          "tableFrom": "prestakers",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "latest_transaction_height"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "prestaking_transactions": {
+      "name": "prestaking_transactions",
+      "schema": "",
+      "columns": {
+        "transaction_hash": {
+          "name": "transaction_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "staker_address": {
+          "name": "staker_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "validator_stake_ratio": {
+          "name": "validator_stake_ratio",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_underdog_pool": {
+          "name": "is_underdog_pool",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "staker_address_idx": {
+          "name": "staker_address_idx",
+          "columns": [
+            "staker_address"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "prestaking_transactions_transaction_hash_transactions_hash_fk": {
+          "name": "prestaking_transactions_transaction_hash_transactions_hash_fk",
+          "tableFrom": "prestaking_transactions",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_hash"
+          ],
+          "columnsTo": [
+            "hash"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "prestaking_transactions_staker_address_prestakers_address_fk": {
+          "name": "prestaking_transactions_staker_address_prestakers_address_fk",
+          "tableFrom": "prestaking_transactions",
+          "tableTo": "prestakers",
+          "columnsFrom": [
+            "staker_address"
+          ],
+          "columnsTo": [
+            "address"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "prestaking_transactions_transaction_hash_unique": {
+          "name": "prestaking_transactions_transaction_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "transaction_hash"
+          ]
+        }
+      }
+    },
+    "transactions": {
+      "name": "transactions",
+      "schema": "",
+      "columns": {
+        "hash": {
+          "name": "hash",
+          "type": "bytea",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "block_height": {
+          "name": "block_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timestamp_ms": {
+          "name": "timestamp_ms",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sender_address": {
+          "name": "sender_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sender_type": {
+          "name": "sender_type",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sender_data": {
+          "name": "sender_data",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recipient_address": {
+          "name": "recipient_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recipient_type": {
+          "name": "recipient_type",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recipient_data": {
+          "name": "recipient_data",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "value": {
+          "name": "value",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee": {
+          "name": "fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "validity_start_height": {
+          "name": "validity_start_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "flags": {
+          "name": "flags",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proof": {
+          "name": "proof",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "related_addresses": {
+          "name": "related_addresses",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        }
+      },
+      "indexes": {
+        "block_height_idx": {
+          "name": "block_height_idx",
+          "columns": [
+            "block_height"
+          ],
+          "isUnique": false
+        },
+        "date_idx": {
+          "name": "date_idx",
+          "columns": [
+            "timestamp_ms"
+          ],
+          "isUnique": false
+        },
+        "sender_address_idx": {
+          "name": "sender_address_idx",
+          "columns": [
+            "sender_address"
+          ],
+          "isUnique": false
+        },
+        "recipient_address_idx": {
+          "name": "recipient_address_idx",
+          "columns": [
+            "recipient_address"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "transactions_block_height_blocks_height_fk": {
+          "name": "transactions_block_height_blocks_height_fk",
+          "tableFrom": "transactions",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "block_height"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "validator_registrations": {
+      "name": "validator_registrations",
+      "schema": "",
+      "columns": {
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "transaction_01": {
+          "name": "transaction_01",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_02": {
+          "name": "transaction_02",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_03": {
+          "name": "transaction_03",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_04": {
+          "name": "transaction_04",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_05": {
+          "name": "transaction_05",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_06": {
+          "name": "transaction_06",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deposit_transaction": {
+          "name": "deposit_transaction",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_01_height": {
+          "name": "transaction_01_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deposit_transaction_height": {
+          "name": "deposit_transaction_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "transaction_01_height_idx": {
+          "name": "transaction_01_height_idx",
+          "columns": [
+            "transaction_01_height"
+          ],
+          "isUnique": false
+        },
+        "deposit_transaction_height_idx": {
+          "name": "deposit_transaction_height_idx",
+          "columns": [
+            "deposit_transaction_height"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "validator_registrations_transaction_01_transactions_hash_fk": {
+          "name": "validator_registrations_transaction_01_transactions_hash_fk",
+          "tableFrom": "validator_registrations",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_01"
+          ],
+          "columnsTo": [
+            "hash"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "validator_registrations_transaction_02_transactions_hash_fk": {
+          "name": "validator_registrations_transaction_02_transactions_hash_fk",
+          "tableFrom": "validator_registrations",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_02"
+          ],
+          "columnsTo": [
+            "hash"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "validator_registrations_transaction_03_transactions_hash_fk": {
+          "name": "validator_registrations_transaction_03_transactions_hash_fk",
+          "tableFrom": "validator_registrations",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_03"
+          ],
+          "columnsTo": [
+            "hash"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "validator_registrations_transaction_04_transactions_hash_fk": {
+          "name": "validator_registrations_transaction_04_transactions_hash_fk",
+          "tableFrom": "validator_registrations",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_04"
+          ],
+          "columnsTo": [
+            "hash"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "validator_registrations_transaction_05_transactions_hash_fk": {
+          "name": "validator_registrations_transaction_05_transactions_hash_fk",
+          "tableFrom": "validator_registrations",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_05"
+          ],
+          "columnsTo": [
+            "hash"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "validator_registrations_transaction_06_transactions_hash_fk": {
+          "name": "validator_registrations_transaction_06_transactions_hash_fk",
+          "tableFrom": "validator_registrations",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_06"
+          ],
+          "columnsTo": [
+            "hash"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "validator_registrations_deposit_transaction_transactions_hash_fk": {
+          "name": "validator_registrations_deposit_transaction_transactions_hash_fk",
+          "tableFrom": "validator_registrations",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "deposit_transaction"
+          ],
+          "columnsTo": [
+            "hash"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "validator_registrations_transaction_01_height_blocks_height_fk": {
+          "name": "validator_registrations_transaction_01_height_blocks_height_fk",
+          "tableFrom": "validator_registrations",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "transaction_01_height"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "validator_registrations_deposit_transaction_height_blocks_height_fk": {
+          "name": "validator_registrations_deposit_transaction_height_blocks_height_fk",
+          "tableFrom": "validator_registrations",
+          "tableTo": "blocks",
+          "columnsFrom": [
+            "deposit_transaction_height"
+          ],
+          "columnsTo": [
+            "height"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "vesting_owners": {
+      "name": "vesting_owners",
+      "schema": "",
+      "columns": {
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "owner": {
+          "name": "owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "address_idx": {
+          "name": "address_idx",
+          "columns": [
+            "address"
+          ],
+          "isUnique": false
+        },
+        "owner_idx": {
+          "name": "owner_idx",
+          "columns": [
+            "owner"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "vesting_owners_address_accounts_address_fk": {
+          "name": "vesting_owners_address_accounts_address_fk",
+          "tableFrom": "vesting_owners",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "address"
+          ],
+          "columnsTo": [
+            "address"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
