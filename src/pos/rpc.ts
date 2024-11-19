@@ -219,10 +219,10 @@ export async function getBlockByNumber<WithTx extends boolean>(
 }
 
 async function rpc<Type>(method: string, ...params: (string | string[] | number | boolean)[]): Promise<Type> {
-	const rpc_url = process.env.POS_RPC_SERVER;
-	if (!rpc_url) throw new Error("POS_RPC_SERVER environment variable is not set");
+	const rpcUrl = process.env.POS_RPC_SERVER;
+	if (!rpcUrl) throw new Error("POS_RPC_SERVER environment variable is not set");
 
-	const socket = await getSocket(rpc_url + "/ws");
+	const socket = await getSocket(`${rpcUrl}/ws`);
 	return socket.call<Type>(method, ...params);
 }
 
