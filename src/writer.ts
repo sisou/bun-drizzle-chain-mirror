@@ -1,58 +1,60 @@
-import { ValidationUtils } from "@nimiq/utils";
 import { Account, Address } from "@sisou/nimiq-ts";
-import { and, desc, eq, gte, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
 	type AccountInsert,
 	accounts,
 	type BlockInsert,
 	blocks,
-	type PrestakerInsert,
-	prestakers,
-	type PrestakingTransactionInsert,
-	prestakingTransactions,
+	type EpochInsert,
+	epochs,
+	type InherentInsert,
+	inherents,
 	type TransactionInsert,
 	transactions,
-	type ValidatorRegistrationInsert,
-	validatorRegistrations,
 	type VestingOwnerInsert,
 	vestingOwners,
 } from "../db/schema";
 import { db } from "./database";
+import { isMacroBlockAt } from "./lib/pos";
 import {
-	BURN_ADDRESS,
-	getPoolAddressesAtBlockHeight,
-	MIN_DELEGATION,
-	PRESTAKING_END_HEIGHT,
-	PRESTAKING_START_HEIGHT,
-	REGISTRATION_END_HEIGHT,
-	REGISTRATION_START_HEIGHT,
-	VALIDATOR_DEPOSIT,
-} from "./lib/prestaking";
-import { TRANSITION_BLOCK } from "./lib/prestaking";
-import {
-	getAccount as getPoWAccount,
-	getBlockByNumber as getPoWBlockByNumber,
-	type Transaction as PoWTransaction,
-} from "./pow/rpc";
+	getAccount,
+	getBlockByNumber,
+	getInherentsByBlockNumber,
+	getTransactionsByBlockNumber,
+	Inherent,
+	type Transaction,
+} from "./pos/rpc";
 
-function toTransactionInsert(tx: PoWTransaction, blockNumber?: number): TransactionInsert {
+function toTransactionInsert(tx: Transaction): TransactionInsert {
 	return {
-		date: tx.timestamp ? new Date(tx.timestamp * 1e3) : undefined,
+		date: tx.timestamp ? new Date(tx.timestamp) : undefined,
 		hash: tx.hash,
-		block_height: blockNumber,
-		sender_address: tx.fromAddress,
+		block_height: tx.blockNumber,
+		sender_address: tx.from,
 		sender_type: tx.fromType,
-		sender_data: undefined,
-		recipient_address: tx.toAddress,
+		sender_data: tx.senderData || null,
+		recipient_address: tx.to,
 		recipient_type: tx.toType,
-		recipient_data: tx.data,
+		recipient_data: tx.recipientData || null,
 		value: tx.value,
 		fee: tx.fee,
 		proof: tx.proof,
 		flags: tx.flags,
 		validity_start_height: tx.validityStartHeight,
-		related_addresses: [],
+		related_addresses: tx.relatedAddresses.filter(address => address !== tx.to && address !== tx.from),
+	};
+}
+
+function toInherentInsert(inh: Inherent): InherentInsert {
+	const { blockTime, blockNumber, type, validatorAddress, ...data } = inh;
+
+	return {
+		date: new Date(inh.blockTime),
+		block_height: inh.blockNumber,
+		type: inh.type,
+		validator_address: inh.validatorAddress,
+		data,
 	};
 }
 
@@ -79,16 +81,19 @@ export async function writeBlocks(
 			).then(res => res.map(row => row.address)),
 		);
 
-		// Through relational onDelete "cascade" rules, deleting the block deletes all its transactions and first-seen accounts
+		// Through relational onDelete "cascade" rules, deleting a block deletes its epoch and all its transactions, inherents and first-seen accounts
 		await db.delete(blocks).where(gte(blocks.height, fromBlock));
 	}
 
 	for (let i = fromBlock; i <= toBlock; i++) {
 		// console.info(`Fetching block #${i}`);
-		const block = await getPoWBlockByNumber(i, true);
-		const isTransitionBlock = block.number === TRANSITION_BLOCK;
+		const isMacroBlock = isMacroBlockAt(i);
+		const block = await getBlockByNumber(i, true);
 
-		const [value, fees] = block.transactions.reduce(([value, fees], tx) => {
+		const blockTransactions = block?.transactions ?? await getTransactionsByBlockNumber(i);
+		const blockInherents = await getInherentsByBlockNumber(i);
+
+		const [value, fees] = blockTransactions.reduce(([value, fees], tx) => {
 			value += tx.value;
 			fees += tx.fee;
 			return [value, fees];
@@ -97,198 +102,65 @@ export async function writeBlocks(
 		const accountEntries = new Map<string, AccountInsert>();
 
 		const blockEntry: BlockInsert = {
-			height: block.number,
-			date: new Date(block.timestamp * 1e3),
-			hash: block.hash,
-			creator_address: block.minerAddress,
-			transaction_count: block.transactions.length,
-			inherent_count: 0,
+			height: i,
+			date: block
+				? new Date(block.timestamp)
+				: blockTransactions[0]
+				? new Date(blockTransactions[0].timestamp)
+				: blockInherents[0]
+				? new Date(blockInherents[0].blockTime)
+				: undefined,
+			hash: block?.hash,
+			transaction_count: isMacroBlock ? 0 : blockTransactions.length,
+			inherent_count: blockInherents.length,
 			value,
 			fees,
-			size: block.size,
-			difficulty: block.difficulty,
-			extra_data: block.extraData,
+			size: block?.size,
+			extra_data: block?.extraData || undefined,
 		};
-		accountEntries.set(block.minerAddress, {
-			address: block.minerAddress,
-			type: 0,
-			balance: 0,
-			first_seen: block.number === TRANSITION_BLOCK ? block.number - 1 : block.number,
-			last_sent: undefined,
-			last_received: block.number === TRANSITION_BLOCK ? block.number - 1 : block.number,
-		});
+
+		// History nodes are guaranteed to have all election blocks
+		const epochEntry: EpochInsert | undefined = block && block.type === "macro" && block.isElectionBlock
+			? {
+				number: block.epoch,
+				block_height: i,
+				elected_validators: block.slots.map((slot) => slot.validator),
+				validator_slots: block.slots.map((slot) => slot.numSlots),
+				// The transition (PoS genesis) doesn't have a justification
+				votes: block.justification?.sig.signers.length ?? 512,
+			}
+			: undefined;
 
 		const vestingOwnerEntries = new Map<string, VestingOwnerInsert>();
-		const validatorRegistrationEntries = new Map<string, ValidatorRegistrationInsert>();
-		const prestakerEntries = new Map<string, PrestakerInsert>();
-		const prestakingTransactionEntries: PrestakingTransactionInsert[] = [];
 
-		const txEntries: TransactionInsert[] = block.transactions.map((tx) => toTransactionInsert(tx, block.number));
+		const txEntries: TransactionInsert[] = isMacroBlock ? [] : blockTransactions.map((tx) => toTransactionInsert(tx));
+		const inhEntries: InherentInsert[] = blockInherents.map((inherent) => toInherentInsert(inherent));
 
-		for (const tx of block.transactions) {
-			accountEntries.set(tx.fromAddress, {
-				address: tx.fromAddress,
+		for (const tx of blockTransactions) {
+			accountEntries.set(tx.from, {
+				address: tx.from,
 				type: tx.fromType,
 				balance: 0,
-				first_seen: block.number,
-				last_sent: block.number,
-				last_received: tx.fromAddress === block.minerAddress ? block.number : undefined,
+				first_seen: i,
+				last_sent: i,
+				last_received: undefined,
 			});
-			accountEntries.set(tx.toAddress, {
-				address: tx.toAddress,
+			accountEntries.set(tx.to, {
+				address: tx.to,
 				type: tx.toType,
 				balance: 0,
-				first_seen: block.number,
+				first_seen: i,
 				last_sent: undefined,
-				last_received: block.number,
+				last_received: i,
 			});
 
 			// Store vesting contract owners
-			if (tx.toType === Account.Type.VESTING && tx.data) {
-				const owner = Address.fromHex(tx.data.substring(0, 40)).toUserFriendlyAddress();
-				vestingOwnerEntries.set(tx.toAddress, {
-					address: tx.toAddress,
+			if (tx.toType === Account.Type.VESTING && tx.recipientData) {
+				const owner = Address.fromHex(tx.recipientData.substring(0, 40)).toUserFriendlyAddress();
+				vestingOwnerEntries.set(tx.to, {
+					address: tx.to,
 					owner,
 				});
-			}
-
-			if (
-				block.number >= REGISTRATION_START_HEIGHT && block.number < REGISTRATION_END_HEIGHT
-				&& tx.toAddress === BURN_ADDRESS
-			) {
-				if (
-					tx.data?.length === 128
-					&& (tx.data.substring(0, 24) === "010000000000000000000000" || [
-						"02000000000000",
-						"03000000000000",
-						"04000000000000",
-						"05000000000000",
-						"06000000000000",
-					].includes(tx.data.substring(0, 14)))
-				) {
-					// Handle validator pre-registration transaction
-					const validatorAddress = tx.fromAddress;
-					const registration: ValidatorRegistrationInsert | undefined = validatorRegistrationEntries.get(
-						validatorAddress,
-					);
-					validatorRegistrationEntries.set(validatorAddress, {
-						address: validatorAddress,
-						transaction_01: tx.data.substring(0, 2) === "01" ? tx.hash : registration?.transaction_01,
-						transaction_02: tx.data.substring(0, 2) === "02" ? tx.hash : registration?.transaction_02,
-						transaction_03: tx.data.substring(0, 2) === "03" ? tx.hash : registration?.transaction_03,
-						transaction_04: tx.data.substring(0, 2) === "04" ? tx.hash : registration?.transaction_04,
-						transaction_05: tx.data.substring(0, 2) === "05" ? tx.hash : registration?.transaction_05,
-						transaction_06: tx.data.substring(0, 2) === "06" ? tx.hash : registration?.transaction_06,
-						deposit_transaction: registration?.deposit_transaction,
-						transaction_01_height: tx.data.substring(0, 2) === "01"
-							? block.number
-							: registration?.transaction_01_height,
-						deposit_transaction_height: registration?.deposit_transaction_height,
-					});
-				} else if (tx.data && tx.data.length >= 72 && tx.value >= VALIDATOR_DEPOSIT) {
-					// Try decoding data as utf-8 and check if it is a valid human-readable address
-					let dataDecoded: string | undefined;
-					try {
-						dataDecoded = new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array(Buffer.from(tx.data, "hex")));
-					} catch (e) {}
-					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
-						// Handle validator deposit transaction
-						const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
-						const registration: ValidatorRegistrationInsert | undefined = validatorRegistrationEntries.get(
-							validatorAddress,
-						);
-						validatorRegistrationEntries.set(validatorAddress, {
-							address: validatorAddress,
-							transaction_01: registration?.transaction_01,
-							transaction_02: registration?.transaction_02,
-							transaction_03: registration?.transaction_03,
-							transaction_04: registration?.transaction_04,
-							transaction_05: registration?.transaction_05,
-							transaction_06: registration?.transaction_06,
-							deposit_transaction: tx.hash,
-							transaction_01_height: registration?.transaction_01_height,
-							deposit_transaction_height: block.number,
-						});
-					}
-				}
-			}
-
-			if (
-				block.number >= PRESTAKING_START_HEIGHT && block.number < PRESTAKING_END_HEIGHT
-				&& tx.toAddress === BURN_ADDRESS
-			) {
-				if (tx.data && tx.data.length >= 72) {
-					// Try decoding data as utf-8 and check if it is a valid human-readable address
-					let dataDecoded: string | undefined;
-					try {
-						dataDecoded = new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array(Buffer.from(tx.data, "hex")));
-					} catch (e) {}
-					if (dataDecoded && ValidationUtils.isValidAddress(dataDecoded)) {
-						const stakerAddress = tx.fromAddress;
-						const validatorAddress = ValidationUtils.normalizeAddress(dataDecoded);
-
-						// If transaction value is below MIN_DELEGATION, the transaction is only valid for prestaking
-						// when the staker already exists.
-						if (
-							tx.value >= MIN_DELEGATION || await db.query.prestakers.findFirst({
-								where: eq(prestakers.address, stakerAddress),
-								columns: {
-									address: true,
-								},
-							})
-						) {
-							const staker: PrestakerInsert | undefined = prestakerEntries.get(stakerAddress);
-							prestakerEntries.set(stakerAddress, {
-								address: stakerAddress,
-								delegation: validatorAddress,
-								first_transaction_height: staker?.first_transaction_height || block.number,
-								latest_transaction_height: block.number,
-							});
-
-							// Take the lower validator stake ratio of the current and previous state
-							const stakingContractNow = await getStakingContractAtBlockHeight(block.number - 1);
-							const stakingContractBefore = await getStakingContractAtBlockHeight(block.number - 2);
-
-							const validatorNow = stakingContractNow.validators.find(validator =>
-								validator.address === validatorAddress
-							)
-								|| { address: validatorAddress, deposit: 0, delegatedStake: 0 };
-							const validatorBefore = stakingContractBefore.validators.find(validator =>
-								validator.address === validatorAddress
-							)
-								|| { address: validatorAddress, deposit: 0, delegatedStake: 0 };
-
-							const validatorStakeRatioNow = (validatorNow.deposit + validatorNow.delegatedStake)
-								/ stakingContractNow.totalStake;
-							const validatorStakeRatioBefore = (validatorBefore.deposit + validatorBefore.delegatedStake)
-								/ stakingContractBefore.totalStake;
-
-							const validatorStakeRatio = Math.min(validatorStakeRatioNow, validatorStakeRatioBefore);
-
-							let isUnderdogPool: boolean | undefined;
-							if (validatorStakeRatio >= 0.1) {
-								const isUnderdogPoolNow = isUnderdogPoolAtBlockHeight(
-									stakingContractNow,
-									validatorAddress,
-									block.number - 1,
-								);
-								const isUnderdogPoolBefore = isUnderdogPoolAtBlockHeight(
-									stakingContractBefore,
-									validatorAddress,
-									block.number - 2,
-								);
-								isUnderdogPool = isUnderdogPoolNow || isUnderdogPoolBefore;
-							}
-
-							prestakingTransactionEntries.push({
-								transaction_hash: tx.hash,
-								staker_address: stakerAddress,
-								validator_stake_ratio: validatorStakeRatio,
-								is_underdog_pool: isUnderdogPool,
-							});
-						}
-					}
-				}
 			}
 
 			options?.mempool?.delete(tx.hash);
@@ -297,7 +169,7 @@ export async function writeBlocks(
 		// Fetch balances
 		await Promise.all(
 			Array.from(accountEntries.keys()).map(async (address) => {
-				const account = await getPoWAccount(address);
+				const account = await getAccount(address);
 				// biome-ignore lint/style/noNonNullAssertion: iteration is over keys of accountEntries
 				accountEntries.get(address)!.balance = account.balance;
 			}),
@@ -315,7 +187,7 @@ export async function writeBlocks(
 					}
 					if (!accountEntries.has(address)) {
 						// Update balance for accounts that are not in the fork
-						const account = await getPoWAccount(address);
+						const account = await getAccount(address);
 						accountEntries.set(address, {
 							...entry,
 							balance: account.balance,
@@ -354,20 +226,9 @@ export async function writeBlocks(
 			`For block #${i}, generated 1 block, ${txEntries.length} transactions, ${accountEntries.size} accounts`,
 		);
 
-		if (validatorRegistrationEntries.size) {
-			console.log(`For block #${i}, generated ${validatorRegistrationEntries.size} validator preregistrations`);
-		}
-
-		if (prestakerEntries.size) {
-			console.log(
-				`For block #${i}, generated ${prestakerEntries.size} prestaking stakers with ${prestakingTransactionEntries.length} transactions`,
-			);
-		}
-
 		await db.transaction(async (trx) => {
-			if (!isTransitionBlock) {
-				await trx.insert(blocks).values(blockEntry);
-			}
+			await trx.insert(blocks).values(blockEntry);
+			if (epochEntry) await trx.insert(epochs).values(epochEntry);
 
 			if (accountEntries.size) {
 				// Accounts must be entered after blocks, so that new blocks are already in the database
@@ -403,7 +264,7 @@ export async function writeBlocks(
 					});
 			}
 
-			if (txEntries.length && !isTransitionBlock) {
+			if (txEntries.length) {
 				const tableName = getTableConfig(transactions).name;
 				await trx.insert(transactions).values(txEntries).onConflictDoUpdate({
 					target: transactions.hash,
@@ -417,215 +278,16 @@ export async function writeBlocks(
 				});
 			}
 
-			if (validatorRegistrationEntries.size) {
-				// Validator preregistrations must be entered after transactions, so that registration transactions are already in the database
-				const tableName = getTableConfig(validatorRegistrations).name;
-				await trx.insert(validatorRegistrations)
-					.values([...validatorRegistrationEntries.values()])
-					.onConflictDoUpdate({
-						target: validatorRegistrations.address,
-						set: {
-							transaction_01: sql.raw(
-								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_01.name}, ${tableName}.${validatorRegistrations.transaction_01.name})`,
-							),
-							transaction_02: sql.raw(
-								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_02.name}, ${tableName}.${validatorRegistrations.transaction_02.name})`,
-							),
-							transaction_03: sql.raw(
-								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_03.name}, ${tableName}.${validatorRegistrations.transaction_03.name})`,
-							),
-							transaction_04: sql.raw(
-								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_04.name}, ${tableName}.${validatorRegistrations.transaction_04.name})`,
-							),
-							transaction_05: sql.raw(
-								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_05.name}, ${tableName}.${validatorRegistrations.transaction_05.name})`,
-							),
-							transaction_06: sql.raw(
-								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_06.name}, ${tableName}.${validatorRegistrations.transaction_06.name})`,
-							),
-							deposit_transaction: sql.raw(
-								`COALESCE(EXCLUDED.${validatorRegistrations.deposit_transaction.name}, ${tableName}.${validatorRegistrations.deposit_transaction.name})`,
-							),
-							transaction_01_height: sql.raw(
-								`COALESCE(EXCLUDED.${validatorRegistrations.transaction_01_height.name}, ${tableName}.${validatorRegistrations.transaction_01_height.name})`,
-							),
-							deposit_transaction_height: sql.raw(
-								`COALESCE(EXCLUDED.${validatorRegistrations.deposit_transaction_height.name}, ${tableName}.${validatorRegistrations.deposit_transaction_height.name})`,
-							),
-						},
-					});
-			}
-
-			if (prestakerEntries.size) {
-				const tableName = getTableConfig(prestakers).name;
-				await trx.insert(prestakers)
-					.values([...prestakerEntries.values()])
-					.onConflictDoUpdate({
-						target: prestakers.address,
-						set: {
-							delegation: sql.raw(
-								`COALESCE(EXCLUDED.${prestakers.delegation.name}, ${tableName}.${prestakers.delegation.name})`,
-							),
-							latest_transaction_height: sql.raw(
-								`COALESCE(EXCLUDED.${prestakers.latest_transaction_height.name}, ${tableName}.${prestakers.latest_transaction_height.name})`,
-							),
-						},
-					});
-			}
-
-			if (prestakingTransactionEntries.length) {
-				await trx.insert(prestakingTransactions).values(prestakingTransactionEntries);
+			if (inhEntries.length) {
+				await trx.insert(inherents).values(inhEntries);
+				// Inherents don't have an identifier, so they cannot conflict.
 			}
 		});
 	}
 }
 
-export async function writeMempoolTransactions(txs: PoWTransaction[]) {
+export async function writeMempoolTransactions(txs: Transaction[]) {
 	if (!txs.length) return;
 	const txEntries = txs.map((tx) => toTransactionInsert(tx));
 	await db.insert(transactions).values(txEntries).onConflictDoNothing();
-}
-
-type DbValidator = {
-	address: string;
-	deposit_transaction: {
-		value: number;
-	} | null;
-	prestakers: {
-		transactions: {
-			transaction: {
-				value: number;
-				block_height: number | null;
-			};
-		}[];
-	}[];
-};
-
-let cache: {
-	validators: DbValidator[];
-	chainHeight: number;
-} | undefined;
-
-async function getValidators() {
-	const headBlock = await db.query.blocks.findFirst({
-		columns: {
-			height: true,
-		},
-		orderBy: desc(blocks.height),
-	});
-	if (!headBlock) {
-		throw new Error("No blocks found in database");
-	}
-
-	const validators = await db.query.validatorRegistrations.findMany({
-		where: and(
-			isNotNull(validatorRegistrations.transaction_01),
-			isNotNull(validatorRegistrations.transaction_02),
-			isNotNull(validatorRegistrations.transaction_03),
-			isNotNull(validatorRegistrations.transaction_04),
-			isNotNull(validatorRegistrations.transaction_05),
-			isNotNull(validatorRegistrations.transaction_06),
-			isNotNull(validatorRegistrations.deposit_transaction),
-		),
-		columns: {
-			address: true,
-		},
-		with: {
-			deposit_transaction: {
-				columns: {
-					value: true,
-				},
-			},
-			prestakers: {
-				columns: {},
-				with: {
-					transactions: {
-						columns: {},
-						with: {
-							transaction: {
-								columns: {
-									block_height: true,
-									value: true,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	});
-
-	for (const { prestakers } of validators) {
-		for (const { transactions } of prestakers) {
-			transactions.sort((a, b) => (a.transaction.block_height || Infinity) - (b.transaction.block_height || Infinity));
-		}
-	}
-
-	cache = {
-		validators,
-		chainHeight: headBlock.height,
-	};
-
-	return validators;
-}
-
-type Validator = {
-	address: string;
-	deposit: number;
-	delegatedStake: number;
-};
-
-type StakingContract = {
-	validators: Validator[];
-	totalStake: number;
-};
-
-async function getStakingContractAtBlockHeight(height: number): Promise<StakingContract> {
-	const validators = cache && height <= cache.chainHeight ? cache.validators : await getValidators();
-	const validatorStakes: Validator[] = validators.map(({ address, deposit_transaction, prestakers }) => {
-		if (!deposit_transaction) {
-			return {
-				address,
-				deposit: 0,
-				delegatedStake: 0,
-			};
-		}
-		let deposit = deposit_transaction.value;
-		// Do not count extra stake in deposit transaction that is below the minimum stake of 100 NIM
-		if (deposit < 100_100e5) {
-			deposit = 100_000e5;
-		}
-		const prestake = prestakers.reduce((total, { transactions }) => {
-			let hadValidTransaction = false;
-			return total + transactions.reduce((total, { transaction }) => {
-				if (!transaction.block_height || transaction.block_height > height) return total;
-				hadValidTransaction = hadValidTransaction || transaction.value >= 100e5;
-				return total + (hadValidTransaction ? transaction.value : 0);
-			}, 0);
-		}, 0);
-
-		return {
-			address,
-			deposit,
-			delegatedStake: prestake,
-		};
-	}, 0);
-
-	return {
-		validators: validatorStakes,
-		totalStake: validatorStakes.reduce(
-			(total, { deposit, delegatedStake }) => total + deposit + delegatedStake,
-			0,
-		),
-	};
-}
-
-function isUnderdogPoolAtBlockHeight(stakingContract: StakingContract, address: string, height: number) {
-	const poolAddresses = getPoolAddressesAtBlockHeight(height);
-
-	const pools = stakingContract.validators
-		.filter(({ address }) => poolAddresses.includes(address))
-		.sort((a, b) => (a.deposit + a.delegatedStake) - (b.deposit + b.delegatedStake));
-
-	return pools[0]?.address === address;
 }

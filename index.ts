@@ -1,14 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { blocks, transactions } from "./db/schema";
 import { db } from "./src/database";
-import { TRANSITION_BLOCK } from "./src/lib/prestaking";
-import {
-	blockNumber as powBlockNumber,
-	getBlockByNumber as getPoWBlockByNumber,
-	getTransactionByHash as getPoWTransactionByHash,
-	mempoolContent as powMempoolContent,
-	type Transaction as PoWTransaction,
-} from "./src/pow/rpc";
+import { getBlockByNumber, getBlockNumber, mempoolContent, type Transaction } from "./src/pos/rpc";
 import { writeBlocks, writeMempoolTransactions } from "./src/writer";
 
 // Step 1: Catch up to the chain
@@ -23,8 +16,7 @@ const mempool = new Set<string>();
 do {
 	const dbHeightResult = await db.select({ height: blocks.height }).from(blocks).orderBy(desc(blocks.height)).limit(1);
 	if (dbHeightResult.length) dbHeight = dbHeightResult[0].height;
-
-	chainHeight = Math.min(await powBlockNumber(), TRANSITION_BLOCK);
+	chainHeight = await getBlockNumber();
 	console.info(`DB height: #${dbHeight} - Chain height: #${chainHeight}: ${chainHeight - dbHeight} blocks behind`);
 
 	// Only catch up until 100 blocks behind, the rest will be done with polling below.
@@ -48,22 +40,22 @@ console.log(`Deleted ${deleted.count} non-included transactions`);
  * Returns `true` if the chain is written until the transition block, `false` otherwise.
  */
 async function pollChain() {
-	const currentHeight = Math.min(await powBlockNumber(), TRANSITION_BLOCK);
+	const currentHeight = await getBlockNumber();
 	// Do not handle reorgs of the current block
-	if (currentHeight === dbHeight) return false;
+	if (currentHeight === dbHeight) return;
 
 	// Find nearest common ancestor
 	const firstNewHeight = Math.min(dbHeight + 1, currentHeight);
-	let firstNewBlock = await getPoWBlockByNumber(firstNewHeight, false);
+	let firstNewBlock = await getBlockByNumber(firstNewHeight, false);
 	let commonAncestorHeight = firstNewHeight - 1;
 	let forked = firstNewHeight <= dbHeight;
 	while (commonAncestorHeight) {
 		const ancestorHash = await db.select({ hash: blocks.hash }).from(blocks).where(
 			eq(blocks.height, commonAncestorHeight),
 		).limit(1).then(res => res.at(0)?.hash);
-		if (ancestorHash === firstNewBlock.parentHash) break;
+		if (!ancestorHash || !firstNewBlock || ancestorHash === firstNewBlock.parentHash) break;
 		// Fetch parent block
-		firstNewBlock = await getPoWBlockByNumber(commonAncestorHeight, false);
+		firstNewBlock = await getBlockByNumber(commonAncestorHeight, false);
 		forked = true;
 		commonAncestorHeight--;
 	}
@@ -79,12 +71,11 @@ async function pollChain() {
 	} catch (error) {
 		console.error("Failed to send WS update:", error);
 	}
-
-	return dbHeight === TRANSITION_BLOCK;
 }
 
 async function pollMempool() {
-	const transactionHashes = await powMempoolContent(false);
+	const mempoolTransactions = await mempoolContent(true);
+	const transactionHashes = mempoolTransactions.map(tx => tx.hash);
 
 	const newHashes = transactionHashes.filter(hash => !mempool.has(hash));
 	if (newHashes.length) console.log("Mempool new hashes:", newHashes);
@@ -92,9 +83,7 @@ async function pollMempool() {
 	if (removedHashes.length) console.log("Mempool removed hashes:", removedHashes);
 
 	// For new hashes, fetch transactions and add to database
-	const newTxs = (await Promise.all(
-		newHashes.map((hash) => getPoWTransactionByHash(hash)),
-	)).filter(Boolean) as PoWTransaction[];
+	const newTxs = mempoolTransactions.filter(tx => newHashes.includes(tx.hash));
 	await writeMempoolTransactions(newTxs);
 	for (const tx of newTxs) mempool.add(tx.hash);
 
@@ -112,18 +101,10 @@ async function pollMempool() {
 }
 
 async function poll() {
-	const done = await pollChain();
-	if (done) {
-		console.log(`Transition block #${TRANSITION_BLOCK} reached, stopping!`);
-		// Delete all non-included transactions
-		const deleted = await db.delete(transactions).where(isNull(transactions.date));
-		console.log(`Deleted ${deleted.count} pending transactions`);
-		return;
-	}
-
+	await pollChain();
 	await pollMempool();
-	// Call itself again after 1s (waiting 1s _between_ polls)
-	setTimeout(poll, 1e3);
+	// Call itself again after 200ms in PoS, 1s in PoW (waiting this time _between_ polls)
+	setTimeout(poll, 200);
 }
 
 // Kick off polling
