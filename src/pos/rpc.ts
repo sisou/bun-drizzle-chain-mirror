@@ -218,61 +218,141 @@ export async function getBlockByNumber<WithTx extends boolean>(
 	}
 }
 
-let rpc_request_id = 0;
-
 async function rpc<Type>(method: string, ...params: (string | string[] | number | boolean)[]): Promise<Type> {
 	const rpc_url = process.env.POS_RPC_SERVER;
 	if (!rpc_url) throw new Error("POS_RPC_SERVER environment variable is not set");
 
-	const authorization_header = process.env.POS_RPC_USERNAME || process.env.POS_RPC_PASSWORD
-		? `Basic ${btoa(`${process.env.POS_RPC_USERNAME}:${process.env.POS_RPC_PASSWORD}`)}`
-		: undefined;
+	const socket = await getSocket(rpc_url + "/ws");
+	return socket.call<Type>(method, ...params);
+}
 
-	const request_id = ++rpc_request_id;
-	if (rpc_request_id >= Number.MAX_SAFE_INTEGER) rpc_request_id = 0;
+/**
+ * Websocket
+ */
 
-	const response = await fetch(rpc_url, {
-		method: "POST",
-		headers: {
-			...(authorization_header ? { Authorization: authorization_header } : {}),
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			jsonrpc: "2.0",
-			method,
-			params,
-			id: request_id,
-		}),
-	}).then(response => {
-		if (!response.ok) throw new Error(`RPC error: ${response.status} ${response.statusText}`);
+const sockets = new Map<string, RpcSocket>();
 
-		return response.json() as Promise<
-			& {
-				jsonrpc: "2.0";
-				id: number;
-			}
-			& ({
-				result: {
-					data: Type;
-					metadata: unknown;
-				};
-			} | {
-				error: {
-					code: number;
-					message: string;
-					data: string;
-				};
-			})
-		>;
+async function getSocket(url: string) {
+	if (sockets.has(url)) {
+		const socket = sockets.get(url) as RpcSocket;
+		if (socket.readyState === WebSocket.OPEN) return socket;
+		socket.close();
+		sockets.delete(url);
+	}
+
+	return new Promise<RpcSocket>((resolve, reject) => {
+		console.log(`Opening a new WS connection to ${url}`);
+		const Authorization = process.env.POS_RPC_USERNAME || process.env.POS_RPC_PASSWORD
+			? `Basic ${btoa(`${process.env.POS_RPC_USERNAME}:${process.env.POS_RPC_PASSWORD}`)}`
+			: undefined;
+		const ws = new WebSocket(url, {
+			headers: Authorization ? { Authorization } : undefined,
+		});
+		ws.binaryType = "arraybuffer";
+		ws.addEventListener("open", () => {
+			const socket = new RpcSocket(ws);
+			sockets.set(url, socket);
+			resolve(socket);
+		});
+		ws.addEventListener("error", reject);
+		ws.addEventListener("close", () => {
+			sockets.delete(url);
+		});
+	});
+}
+
+type RpcResponse<Type> =
+	& {
+		jsonrpc: "2.0";
+		id: number;
+	}
+	& ({
+		result: {
+			data: Type;
+			metadata: unknown;
+		};
+	} | {
+		error: {
+			code: number;
+			message: string;
+			data: string;
+		};
 	});
 
-	if ("error" in response) {
-		throw new Error(`RPC error: ${response.error.message} - ${response.error.data}`);
+class RpcSocket {
+	private requestId = 0;
+	private callbacks = new Map<number, (response: RpcResponse<unknown>) => void>();
+	private decoder = new TextDecoder();
+
+	constructor(private ws: WebSocket) {
+		ws.addEventListener("message", (event) => this.onMessage(event));
+		ws.addEventListener("close", (event) => this.cleanup(event));
 	}
 
-	if (response.id !== request_id) {
-		throw new Error("RPC response id does not match request id");
+	public async call<Type>(method: string, ...params: (string | string[] | number | boolean)[]): Promise<Type> {
+		const id = ++this.requestId;
+		if (this.requestId >= Number.MAX_SAFE_INTEGER) this.requestId = 0;
+
+		return new Promise<Type>((resolve, reject) => {
+			this.callbacks.set(id, response => {
+				if ("error" in response) {
+					reject(new Error(`RPC error: ${response.error.message} - ${response.error.data}`));
+				} else {
+					resolve(response.result.data as Type);
+				}
+			});
+
+			this.ws.send(JSON.stringify({
+				jsonrpc: "2.0",
+				method,
+				params,
+				id,
+			}));
+		});
 	}
 
-	return response.result.data as Type;
+	public get readyState() {
+		return this.ws.readyState;
+	}
+
+	public close() {
+		return this.ws.close();
+	}
+
+	private onMessage = (event: MessageEvent<unknown>) => {
+		let msg: string;
+		if (typeof event.data === "string") {
+			msg = event.data;
+		} else if (event.data instanceof ArrayBuffer) {
+			msg = this.decoder.decode(event.data);
+		} else {
+			console.error("Invalid WS response", event.data);
+			return;
+		}
+
+		const response = JSON.parse(msg) as RpcResponse<unknown>;
+
+		const callback = this.callbacks.get(response.id);
+		if (!callback) {
+			console.error("No callback for WS response", response);
+			return;
+		}
+
+		callback(response);
+		this.callbacks.delete(response.id);
+	};
+
+	private cleanup(event: CloseEvent) {
+		for (const [id, callback] of this.callbacks.entries()) {
+			callback({
+				jsonrpc: "2.0",
+				id,
+				error: {
+					code: event.code,
+					message: "Connection closed",
+					data: "",
+				},
+			});
+		}
+	}
 }
