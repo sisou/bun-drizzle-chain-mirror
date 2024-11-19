@@ -42,7 +42,7 @@ function toTransactionInsert(tx: Transaction): TransactionInsert {
 		proof: tx.proof,
 		flags: tx.flags,
 		validity_start_height: tx.validityStartHeight,
-		related_addresses: tx.relatedAddresses.filter(address => address !== tx.to && address !== tx.from),
+		related_addresses: tx.relatedAddresses?.filter(address => address !== tx.to && address !== tx.from) || [],
 	};
 }
 

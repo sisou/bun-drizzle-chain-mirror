@@ -75,7 +75,7 @@ async function pollChain() {
 
 async function pollMempool() {
 	const mempoolTransactions = await mempoolContent(true);
-	const transactionHashes = mempoolTransactions.map(tx => tx.hash);
+	const transactionHashes = mempoolTransactions.map(tx => tx.hash).filter(Boolean);
 
 	const newHashes = transactionHashes.filter(hash => !mempool.has(hash));
 	if (newHashes.length) console.log("Mempool new hashes:", newHashes);
