@@ -131,6 +131,10 @@ export async function writeBlocks(
 			}
 			: undefined;
 
+		if (epochEntry) {
+			console.log(`Storing EPOCH ${epochEntry.number}`);
+		}
+
 		const vestingOwnerEntries = new Map<string, VestingOwnerInsert>();
 
 		const txEntries: TransactionInsert[] = isMacroBlock ? [] : blockTransactions.map((tx) => toTransactionInsert(tx));
