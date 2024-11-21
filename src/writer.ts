@@ -113,6 +113,7 @@ export async function writeBlocks(
 			hash: block?.hash,
 			transaction_count: isMacroBlock ? 0 : blockTransactions.length,
 			inherent_count: blockInherents.length,
+			creator_address: block && "producer" in block ? block.producer.validator : undefined,
 			value,
 			fees,
 			size: block?.size,
