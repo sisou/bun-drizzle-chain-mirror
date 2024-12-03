@@ -1,7 +1,7 @@
 const network = process.env.NETWORK || "testnet";
 const isMainnet = network.includes("main");
 
-const TRANSITION_BLOCK = isMainnet ? 3_456_000 : 3_032_010;
+export const TRANSITION_BLOCK = isMainnet ? 3_456_000 : 3_032_010;
 
 const BLOCKS_PER_BATCH = 60;
 const BATCHES_PER_EPOCH = 720;
