@@ -1,5 +1,6 @@
 const network = process.env.NETWORK || "testnet";
-const isMainnet = network.includes("main");
+
+export const isMainnet = network.includes("main");
 
 export const TRANSITION_BLOCK = isMainnet ? 3_456_000 : 3_032_010;
 

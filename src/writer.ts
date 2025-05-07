@@ -16,7 +16,7 @@ import {
 	vestingOwners,
 } from "../db/schema";
 import { db } from "./database";
-import { isMacroBlockAt } from "./lib/pos";
+import { isMacroBlockAt, isMainnet } from "./lib/pos";
 import {
 	getAccount,
 	getBlockByNumber,
@@ -138,7 +138,11 @@ export async function writeBlocks(
 
 		const vestingOwnerEntries = new Map<string, VestingOwnerInsert>();
 
-		const txEntries: TransactionInsert[] = isMacroBlock ? [] : blockTransactions.map((tx) => toTransactionInsert(tx));
+		const txEntries: TransactionInsert[] = isMacroBlock
+			? []
+			: blockTransactions
+				.filter((tx) => isMainnet || tx.value >= 10)
+				.map((tx) => toTransactionInsert(tx));
 		const inhEntries: InherentInsert[] = blockInherents.map((inherent) => toInherentInsert(inherent));
 
 		for (const tx of blockTransactions) {
