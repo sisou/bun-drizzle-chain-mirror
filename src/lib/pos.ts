@@ -12,36 +12,36 @@ export function isMacroBlockAt(blockNumber: number): boolean {
 	// No macro blocks before genesis
 	if (blockNumber < TRANSITION_BLOCK) {
 		return false;
-	} else {
-		return batchIndexAt(blockNumber) === BLOCKS_PER_BATCH - 1;
 	}
+
+	return batchIndexAt(blockNumber) === BLOCKS_PER_BATCH - 1;
 }
 
 export function isElectionBlockAt(blockNumber: number): boolean {
 	// No election blocks before genesis
 	if (blockNumber < TRANSITION_BLOCK) {
 		return false;
-	} else {
-		return epochIndexAt(blockNumber) === BLOCKS_PER_EPOCH - 1;
 	}
+
+	return epochIndexAt(blockNumber) === BLOCKS_PER_EPOCH - 1;
 }
 
 function batchIndexAt(blockNumber: number): number {
 	// No batches before the genesis block number
 	if (blockNumber < TRANSITION_BLOCK) {
 		return blockNumber;
-	} else {
-		const blocksSinceGenesis = blockNumber - TRANSITION_BLOCK;
-		return (blocksSinceGenesis + BLOCKS_PER_BATCH - 1) % BLOCKS_PER_BATCH;
 	}
+
+	const blocksSinceGenesis = blockNumber - TRANSITION_BLOCK;
+	return (blocksSinceGenesis + BLOCKS_PER_BATCH - 1) % BLOCKS_PER_BATCH;
 }
 
 function epochIndexAt(blockNumber: number): number {
 	// Any block before the genesis is considered to be part of epoch 0
 	if (blockNumber < TRANSITION_BLOCK) {
 		return blockNumber;
-	} else {
-		const blocksSinceGenesis = blockNumber - TRANSITION_BLOCK;
-		return (blocksSinceGenesis + BLOCKS_PER_EPOCH - 1) % BLOCKS_PER_EPOCH;
 	}
+
+	const blocksSinceGenesis = blockNumber - TRANSITION_BLOCK;
+	return (blocksSinceGenesis + BLOCKS_PER_EPOCH - 1) % BLOCKS_PER_EPOCH;
 }

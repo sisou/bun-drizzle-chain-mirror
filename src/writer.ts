@@ -22,7 +22,7 @@ import {
 	getBlockByNumber,
 	getInherentsByBlockNumber,
 	getTransactionsByBlockNumber,
-	Inherent,
+	type Inherent,
 	type Transaction,
 } from "./pos/rpc";
 

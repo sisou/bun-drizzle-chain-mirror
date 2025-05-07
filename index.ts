@@ -121,18 +121,18 @@ function connectWS() {
 
 	// Set up websocket connection
 	ws = new WebSocket(url);
-	ws.onopen = function() {
+	ws.onopen = () => {
 		console.log("Websocket OPENED");
 		ws.send(JSON.stringify({ password: process.env.WEBSOCKET_PASSWORD, height: dbHeight }));
 	};
-	ws.onerror = function(e) {
+	ws.onerror = (e) => {
 		if ("message" in e) {
 			console.error(`Websocket ERROR: ${e.message}`);
 		} else {
 			console.error("Websocket ERROR: Generic error");
 		}
 	};
-	ws.onclose = function() {
+	ws.onclose = () => {
 		console.log("Websocket CLOSED");
 		setTimeout(connectWS, 2000);
 	};
