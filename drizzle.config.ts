@@ -9,7 +9,7 @@ export default {
 		url: process.env.DATABASE_URL!,
 	},
 	migrations: {
-		schema: 'public',
+		schema: "public",
 	},
 	verbose: true,
 	strict: true,

@@ -3,7 +3,7 @@ import { db, pg } from "../src/database";
 
 // This will run migrations on the database, skipping the ones already applied
 console.log("Running migrations...");
-await migrate(db, { migrationsFolder: "./drizzle", migrationsSchema: 'public' });
+await migrate(db, { migrationsFolder: "./drizzle", migrationsSchema: "public" });
 
 // Don't forget to close the connection, otherwise the script might hang
 console.log("Closing database");
