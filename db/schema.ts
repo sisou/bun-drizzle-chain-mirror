@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import {
 	bigint,
 	bigserial,
@@ -222,7 +222,7 @@ export const inherents = pgTable("inherents", {
 export type Inherent = typeof inherents.$inferSelect;
 export type InherentInsert = typeof inherents.$inferInsert;
 
-export const inherentsRelations = relations(inherents, ({ one, many }) => ({
+export const inherentsRelations = relations(inherents, ({ one }) => ({
 	block: one(blocks, {
 		fields: [inherents.block_height],
 		references: [blocks.height],
