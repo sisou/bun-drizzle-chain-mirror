@@ -222,7 +222,11 @@ async function computeRestakeTransactions() {
 }
 
 async function compute() {
-	await computeRestakeTransactions();
+	// Run computations for 5s
+	const startTime = Date.now();
+	while (Date.now() - startTime < 5e3) {
+		await computeRestakeTransactions();
+	}
 
 	// Call itself again after 60s
 	setTimeout(compute, 60e3);
