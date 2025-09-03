@@ -1,7 +1,10 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
-import { blocks, transactions } from "./db/schema";
+import { UTCDateMini } from "@date-fns/utc";
+import { addHours, addMinutes } from "date-fns";
+import { and, desc, eq, gte, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { blocks, restakeTransactionsGrouped, transactions } from "./db/schema";
 import { db } from "./src/database";
-import { getBlockByNumber, getBlockNumber, mempoolContent, type Transaction } from "./src/pos/rpc";
+import { isMainnet } from "./src/lib/pos";
+import { getBlockByNumber, getBlockNumber, mempoolContent } from "./src/pos/rpc";
 import { writeBlocks, writeMempoolTransactions } from "./src/writer";
 
 // Step 1: Catch up to the chain
@@ -36,9 +39,6 @@ console.log(`Deleted ${deleted.count} non-included transactions`);
 // Step 2: Start listening for blocks live
 // (Also handle missing blocks in between.)
 
-/**
- * Returns `true` if the chain is written until the transition block, `false` otherwise.
- */
 async function pollChain() {
 	const currentHeight = await getBlockNumber();
 	// Do not handle reorgs of the current block
@@ -103,7 +103,8 @@ async function pollMempool() {
 async function poll() {
 	await pollChain();
 	await pollMempool();
-	// Call itself again after 200ms in PoS, 1s in PoW (waiting this time _between_ polls)
+
+	// Call itself again after 200ms
 	setTimeout(poll, 200);
 }
 
@@ -138,3 +139,95 @@ function connectWS() {
 	};
 }
 connectWS();
+
+// Update computed tables
+async function computeRestakeTransactions() {
+	// INSERT INTO restake_transactions_grouped (
+	//     staker_address,
+	//     sender_address,
+	//     time_window,
+	//     aggregated_value
+	// )
+	// SELECT
+	//     related_addresses[1] AS staker_address,
+	//     sender_address,
+	//     DATE_TRUNC('hour', timestamp_ms) +
+	//         INTERVAL '15 minutes' * FLOOR(EXTRACT(MINUTE FROM timestamp_ms) / 15) AS time_window,
+	//     SUM(value) AS aggregated_value
+	// FROM transactions
+	// WHERE
+	//     recipient_address = 'NQ77 0000 0000 0000 0000 0000 0000 0000 0001'
+	//     AND get_byte(recipient_data, 0) = 6
+	//     AND timestamp_ms IS NOT NULL
+	//     AND related_addresses[1] IS NOT NULL
+	//     AND timestamp_ms >= '2017-01-01 00:00:00'
+	//     and timestamp_ms < '2025-09-01 00:00:00'
+	// GROUP BY
+	//     staker_address,
+	//     time_window,
+	//     sender_address;
+
+	// Fetch latest computed timeframe
+	const latest = await db.query.restakeTransactionsGrouped.findFirst({
+		orderBy: desc(restakeTransactionsGrouped.time_window),
+		columns: { time_window: true },
+	});
+	const fromTime = latest
+		? addMinutes(new UTCDateMini(latest.time_window), 15) // Start next insert at the end of the latest time window
+		: new UTCDateMini(isMainnet ? "2024-11-19T16:45:00Z" : "2024-11-13T20:00:00Z"); // PoS transition block time, rounded down to start of 15 minute window
+	const toTime = addMinutes(fromTime, 15); // 15 minutes later
+
+	// Do not compute time windows later than 1 hour ago, to ensure finality of computed transactions
+	if (addHours(toTime, -1) > new UTCDateMini()) return;
+
+	console.log(`Computing restake transactions from ${fromTime.toISOString()} to ${toTime.toISOString()}`);
+	const selectQuery = db.select({
+		staker_address: sql<string>`${transactions.related_addresses}[1]`.as("staker_address"),
+		sender_address: transactions.sender_address,
+		time_window: sql<
+			Date
+		>`DATE_TRUNC('hour', ${transactions.date}) + INTERVAL '15 minutes' * FLOOR(EXTRACT(MINUTE FROM ${transactions.date}) / 15)`
+			.as("time_window"),
+		aggregated_value: sql<number>`SUM(${transactions.value})`.as("aggregated_value"),
+	})
+		.from(transactions)
+		.where(and(
+			eq(transactions.recipient_address, "NQ77 0000 0000 0000 0000 0000 0000 0000 0001"),
+			sql`get_byte(${transactions.recipient_data}, 0) = 6`,
+			isNotNull(transactions.date),
+			isNotNull(sql`${transactions.related_addresses}[1]`),
+			gte(transactions.date, fromTime),
+			lt(transactions.date, toTime),
+		))
+		.groupBy(
+			sql`staker_address`,
+			sql`time_window`,
+			sql`sender_address`,
+		);
+	const result = await db.insert(restakeTransactionsGrouped).select(
+		sql`${selectQuery.getSQL()}`, // Type hack
+	);
+	console.log(`Inserted ${result.count} aggregated restake transactions`);
+
+	if (!result.count) {
+		// Insert a dummy entry to mark that this timeframe has been computed
+		await db.insert(restakeTransactionsGrouped).values({
+			staker_address: "NQ000 0000 0000 0000 0000 0000 0000 0000 0000",
+			sender_address: "NQ000 0000 0000 0000 0000 0000 0000 0000 0000",
+			time_window: fromTime,
+			aggregated_value: 0,
+		});
+		console.log("Inserted dummy entry for empty timeframe");
+	}
+}
+
+async function compute() {
+	await computeRestakeTransactions();
+
+	// Call itself again after 60s
+	setTimeout(compute, 60e3);
+}
+
+// Kick off computing
+console.log("Computing aggregated tables...");
+compute();

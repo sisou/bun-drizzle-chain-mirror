@@ -50,10 +50,10 @@ function toInherentInsert(inh: Inherent): InherentInsert {
 	const { blockTime, blockNumber, type, validatorAddress, ...data } = inh;
 
 	return {
-		date: new Date(inh.blockTime),
-		block_height: inh.blockNumber,
-		type: inh.type,
-		validator_address: inh.validatorAddress,
+		date: new Date(blockTime),
+		block_height: blockNumber,
+		type: type,
+		validator_address: validatorAddress,
 		data,
 	};
 }

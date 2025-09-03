@@ -239,19 +239,20 @@ export const inherentsRelations = relations(inherents, ({ one }) => ({
  */
 
 export const restakeTransactionsGrouped = pgTable("restake_transactions_grouped", {
-	stakerAddress: text("staker_address").notNull(),
-	senderAddress: text("sender_address").notNull(),
-	timeWindow: timestamp("time_window", { mode: "date", precision: 3 }).notNull(),
+	staker_address: text("staker_address").notNull(),
+	sender_address: text("sender_address").notNull(),
+	time_window: timestamp("time_window", { mode: "date", precision: 3 }).notNull(),
 	aggregated_value: bigint("aggregated_value", { mode: "number" }).notNull(),
 }, (table) => ({
 	restake_transactions_grouped_pkey: primaryKey({
 		name: "restake_transactions_grouped_pkey",
-		columns: [table.stakerAddress, table.timeWindow, table.senderAddress],
+		columns: [table.staker_address, table.time_window, table.sender_address],
 	}),
 	// Indices with INCLUDE columns are not yet supported by Drizzle's schema builder (https://github.com/drizzle-team/drizzle-orm/issues/2972),
 	// thus I added that clause manually in the migration SQL file (0019_lame_the_twelve.sql).
-	staker_time_idx: index("staker_time_idx").on(table.stakerAddress, table.timeWindow),
+	staker_time_idx: index("staker_time_idx").on(table.staker_address, table.time_window),
 }));
+export type RestakeTransactionGroup = typeof restakeTransactionsGrouped.$inferSelect;
 
 /**
  * Prestaking
