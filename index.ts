@@ -178,7 +178,7 @@ async function computeRestakeTransactions() {
 	const toTime = addMinutes(fromTime, 15); // 15 minutes later
 
 	// Do not compute time windows later than 1 hour ago, to ensure finality of computed transactions
-	if (addHours(toTime, -1) > new UTCDateMini()) return;
+	if (toTime > addHours(new UTCDateMini(), -1)) return;
 
 	console.log(`Computing restake transactions from ${fromTime.toISOString()} to ${toTime.toISOString()}`);
 	const selectQuery = db.select({
