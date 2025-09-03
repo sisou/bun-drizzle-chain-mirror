@@ -178,7 +178,7 @@ async function computeRestakeTransactions() {
 	const toTime = addMinutes(fromTime, 15); // 15 minutes later
 
 	// Do not compute time windows later than 1 hour ago, to ensure finality of computed transactions
-	if (toTime > addHours(new UTCDateMini(), -1)) return;
+	if (toTime > addHours(new UTCDateMini(), -1)) return false;
 
 	console.log(`Computing restake transactions from ${fromTime.toISOString()} to ${toTime.toISOString()}`);
 	const selectQuery = db.select({
@@ -219,13 +219,15 @@ async function computeRestakeTransactions() {
 		});
 		console.log("Inserted dummy entry for empty timeframe");
 	}
+
+	return true;
 }
 
 async function compute() {
 	// Run computations for 5s
 	const startTime = Date.now();
 	while (Date.now() - startTime < 5e3) {
-		await computeRestakeTransactions();
+		if (!(await computeRestakeTransactions())) break;
 	}
 
 	// Call itself again after 60s
