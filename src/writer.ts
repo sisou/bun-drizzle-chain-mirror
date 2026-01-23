@@ -1,5 +1,5 @@
 import { Account, Address } from "@sisou/nimiq-ts";
-import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
 	type AccountInsert,
@@ -293,6 +293,8 @@ export async function writeBlocks(
 				// Inherents don't have an identifier, so they cannot conflict.
 			}
 		});
+
+		await extractRewardInherentTargetAddress();
 	}
 }
 
@@ -300,4 +302,53 @@ export async function writeMempoolTransactions(txs: Transaction[]) {
 	if (!txs.length) return;
 	const txEntries = txs.map((tx) => toTransactionInsert(tx));
 	await db.insert(transactions).values(txEntries).onConflictDoNothing();
+}
+
+async function extractRewardInherentTargetAddress() {
+	// const count = await db.$count(
+	// 	inherents,
+	// 	and(
+	// 		eq(inherents.type, "reward"),
+	// 		isNull(inherents.target_address),
+	// 	),
+	// );
+
+	// console.log(`Found ${count} reward inherents without target_address set`);
+
+	// let progress = 0;
+
+	const dbInherents = await db.query.inherents.findMany({
+		where: and(
+			eq(inherents.type, "reward"),
+			isNull(inherents.target_address),
+		),
+		limit: 100,
+		columns: {
+			id: true,
+			data: true,
+		},
+	});
+
+	for (const inh of dbInherents) {
+		const data = inh.data as { target?: string };
+		const target_address = data.target;
+		delete data.target;
+
+		await db.update(inherents)
+			.set({
+				target_address: target_address,
+				data: data,
+			})
+			.where(eq(inherents.id, inh.id));
+	}
+
+	// progress += dbInherents.length;
+
+	// console.log(
+	// 	`Processed batch of ${dbInherents.length} inherents (${progress}/${count}, ${
+	// 		((progress / count) * 100).toFixed(2)
+	// 	}%)`,
+	// );
+
+	console.log(`Processed ${dbInherents.length} reward inherents`);
 }
