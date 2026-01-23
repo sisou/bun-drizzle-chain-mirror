@@ -124,7 +124,7 @@ type PenalizeInherent = BaseInherent & {
 };
 
 type JailInherent = BaseInherent & {
-	type: "penalize";
+	type: "jail";
 	validatorAddress: string;
 	offenseEventBlock: number;
 };
