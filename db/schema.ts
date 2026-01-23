@@ -63,10 +63,10 @@ export const blocks = pgTable("blocks", {
 	size: integer("size"),
 	difficulty: real("difficulty"),
 	extra_data: bytea("extra_data"),
-}, (table) => ({
-	block_hash_idx: uniqueIndex("block_hash_idx").on(table.hash),
-	creator_address_idx: index("creator_address_idx").on(table.creator_address),
-}));
+}, (table) => [
+	uniqueIndex("block_hash_idx").on(table.hash),
+	index("creator_address_idx").on(table.creator_address),
+]);
 export type Block = typeof blocks.$inferSelect;
 export type BlockInsert = typeof blocks.$inferInsert;
 
@@ -86,11 +86,11 @@ export const epochs = pgTable("epochs", {
 	elected_validators: text("elected_validators").array().notNull(),
 	validator_slots: integer("validator_slots").array().notNull(),
 	votes: integer("votes").notNull(),
-}, (table) => ({
-	epoch_block_height_idx: index("epoch_block_height_idx").on(table.block_height),
-	// epoch_block_date_idx: index("epoch_block_date_idx").on(table.block_date),
-	epoch_elected_validators_idx: index("epoch_elected_validators_idx").on(table.elected_validators),
-}));
+}, (table) => [
+	index("epoch_block_height_idx").on(table.block_height),
+	// index("epoch_block_date_idx").on(table.block_date),
+	index("epoch_elected_validators_idx").on(table.elected_validators),
+]);
 export type Epoch = typeof epochs.$inferSelect;
 export type EpochInsert = typeof epochs.$inferInsert;
 
@@ -108,11 +108,11 @@ export const accounts = pgTable("accounts", {
 	first_seen: integer("first_seen").references(() => blocks.height, { onDelete: "cascade" }),
 	last_sent: integer("last_sent").references(() => blocks.height, { onDelete: "set null" }),
 	last_received: integer("last_received").references(() => blocks.height, { onDelete: "set null" }),
-}, (table) => ({
-	first_seen_idx: index("first_seen_idx").on(table.first_seen),
-	last_sent_idx: index("last_sent_idx").on(table.last_sent),
-	last_received_idx: index("last_received_idx").on(table.last_received),
-}));
+}, (table) => [
+	index("first_seen_idx").on(table.first_seen),
+	index("last_sent_idx").on(table.last_sent),
+	index("last_received_idx").on(table.last_received),
+]);
 export type Account = typeof accounts.$inferSelect;
 export type AccountInsert = typeof accounts.$inferInsert;
 
@@ -143,10 +143,10 @@ export const accountsRelations = relations(accounts, ({ many, one }) => ({
 export const vestingOwners = pgTable("vesting_owners", {
 	address: text("address").primaryKey().references(() => accounts.address, { onDelete: "cascade" }),
 	owner: text("owner").notNull(),
-}, (table) => ({
-	address_idx: index("address_idx").on(table.address),
-	owner_idx: index("owner_idx").on(table.owner),
-}));
+}, (table) => [
+	index("address_idx").on(table.address),
+	index("owner_idx").on(table.owner),
+]);
 export type VestingOwner = typeof vestingOwners.$inferSelect;
 export type VestingOwnerInsert = typeof vestingOwners.$inferInsert;
 
@@ -177,12 +177,12 @@ export const transactions = pgTable("transactions", {
 	flags: smallint("flags").notNull(),
 	proof: bytea("proof"),
 	related_addresses: text("related_addresses").array().notNull(), // TODO: Go through PoW transactions and check for related addresses, e.g. signer !== sender
-}, (table) => ({
-	block_height_idx: index("block_height_idx").on(table.block_height),
-	date_idx: index("date_idx").on(table.date),
-	sender_address_idx: index("sender_address_idx").on(table.sender_address),
-	recipient_address_idx: index("recipient_address_idx").on(table.recipient_address),
-}));
+}, (table) => [
+	index("block_height_idx").on(table.block_height),
+	index("date_idx").on(table.date),
+	index("sender_address_idx").on(table.sender_address),
+	index("recipient_address_idx").on(table.recipient_address),
+]);
 export type Transaction = typeof transactions.$inferSelect;
 export type TransactionInsert = typeof transactions.$inferInsert;
 
@@ -214,12 +214,12 @@ export const inherents = pgTable("inherents", {
 	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }).notNull(),
 	validator_address: text("validator_address").notNull(), // .references(() => validators.address, { onDelete: "cascade" })
 	data: jsonb("data"),
-}, (table) => ({
-	inherent_type_idx: index("inherent_type_idx").on(table.type),
-	inherent_block_height_idx: index("inherent_block_height_idx").on(table.block_height),
-	// inherent_date_idx: index("inherent_date_idx").on(table.date),
-	inherent_validator_address_idx: index("inherent_validator_address_idx").on(table.validator_address),
-}));
+}, (table) => [
+	index("inherent_type_idx").on(table.type),
+	index("inherent_block_height_idx").on(table.block_height),
+	// index("inherent_date_idx").on(table.date),
+	index("inherent_validator_address_idx").on(table.validator_address),
+]);
 export type Inherent = typeof inherents.$inferSelect;
 export type InherentInsert = typeof inherents.$inferInsert;
 
@@ -243,15 +243,15 @@ export const restakeTransactionsGrouped = pgTable("restake_transactions_grouped"
 	sender_address: text("sender_address").notNull(),
 	time_window: timestamp("time_window", { mode: "date", precision: 3 }).notNull(),
 	aggregated_value: bigint("aggregated_value", { mode: "number" }).notNull(),
-}, (table) => ({
-	restake_transactions_grouped_pkey: primaryKey({
+}, (table) => [
+	primaryKey({
 		name: "restake_transactions_grouped_pkey",
 		columns: [table.staker_address, table.time_window, table.sender_address],
 	}),
 	// Indices with INCLUDE columns are not yet supported by Drizzle's schema builder (https://github.com/drizzle-team/drizzle-orm/issues/2972),
 	// thus I added that clause manually in the migration SQL file (0019_lame_the_twelve.sql).
-	staker_time_idx: index("staker_time_idx").on(table.staker_address, table.time_window),
-}));
+	index("staker_time_idx").on(table.staker_address, table.time_window),
+]);
 export type RestakeTransactionGroup = typeof restakeTransactionsGrouped.$inferSelect;
 
 /**
@@ -271,10 +271,10 @@ export const validatorRegistrations = pgTable("validator_registrations", {
 	deposit_transaction_height: integer("deposit_transaction_height").references(() => blocks.height, {
 		onDelete: "set null",
 	}),
-}, (table) => ({
-	transaction_01_height_idx: index("transaction_01_height_idx").on(table.transaction_01_height),
-	deposit_transaction_height_idx: index("deposit_transaction_height_idx").on(table.deposit_transaction_height),
-}));
+}, (table) => [
+	index("transaction_01_height_idx").on(table.transaction_01_height),
+	index("deposit_transaction_height_idx").on(table.deposit_transaction_height),
+]);
 export type ValidatorRegistration = typeof validatorRegistrations.$inferSelect;
 export type ValidatorRegistrationInsert = typeof validatorRegistrations.$inferInsert;
 
@@ -327,11 +327,11 @@ export const prestakers = pgTable("prestakers", {
 	latest_transaction_height: integer("latest_transaction_height").references(() => blocks.height, {
 		onDelete: "set null",
 	}),
-}, (table) => ({
-	delegation_idx: index("delegation_idx").on(table.delegation),
-	first_transaction_height_idx: index("first_transaction_height_idx").on(table.first_transaction_height),
-	latest_transaction_height_idx: index("latest_transaction_height_idx").on(table.latest_transaction_height),
-}));
+}, (table) => [
+	index("delegation_idx").on(table.delegation),
+	index("first_transaction_height_idx").on(table.first_transaction_height),
+	index("latest_transaction_height_idx").on(table.latest_transaction_height),
+]);
 export type Prestaker = typeof prestakers.$inferSelect;
 export type PrestakerInsert = typeof prestakers.$inferInsert;
 
@@ -352,9 +352,9 @@ export const prestakingTransactions = pgTable("prestaking_transactions", {
 	}),
 	validator_stake_ratio: real("validator_stake_ratio").notNull(),
 	is_underdog_pool: boolean("is_underdog_pool"),
-}, (table) => ({
-	staker_address_idx: index("staker_address_idx").on(table.staker_address),
-}));
+}, (table) => [
+	index("staker_address_idx").on(table.staker_address),
+]);
 export type PrestakingTransaction = typeof prestakingTransactions.$inferSelect;
 export type PrestakingTransactionInsert = typeof prestakingTransactions.$inferInsert;
 
