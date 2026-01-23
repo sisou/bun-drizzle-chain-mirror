@@ -1,39 +1,41 @@
 {
-	"name": "bun-drizzle-chain-mirror",
-	"module": "index.ts",
-	"type": "module",
-	"scripts": {
-		"fmt": "dprint fmt",
-		"lint": "biome lint index.ts src/** db/**",
-		"migrate:generate": "drizzle-kit generate",
-		"migrate:up": "bun run db/migrate.ts",
-		"migrate": "bun run migrate:generate && bun run migrate:up",
-		"seed:testnet": "bun run db/seed-testnet.ts",
-		"seed:mainnet": "bun run db/seed-mainnet.ts",
-		"db:postprocess:testnet": "bun run db/postprocess-testnet.ts",
-		"db:postprocess:mainnet": "bun run db/postprocess-mainnet.ts",
-		"start:testnet": "bun run migrate:up && bun run seed:testnet && bun run db:postprocess:testnet && bun run index.ts",
-		"start:mainnet": "bun run migrate:up && bun run seed:mainnet && bun run db:postprocess:mainnet && bun run index.ts"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
-		"@electric-sql/pglite": "^0.3.7",
-		"bun-types": "^1.2.12",
-		"dprint": "^0.49.1",
-		"drizzle-kit": "^0.31.1"
-	},
-	"peerDependencies": {
-		"typescript": "^5.8.3"
-	},
-	"dependencies": {
-		"@date-fns/utc": "^2.1.1",
-		"@nimiq/utils": "^0.12.3",
-		"@sisou/nimiq-ts": "npm:@jsr/sisou__nimiq-ts",
-		"date-fns": "^4.1.0",
-		"drizzle-orm": "^0.43.1",
-		"postgres": "^3.4.5"
-	},
-	"trustedDependencies": [
-		"@biomejs/biome"
-	]
+  "name": "bun-drizzle-chain-mirror",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "fmt": "dprint fmt",
+    "lint": "biome lint index.ts src/** db/**",
+    "migrate:generate": "drizzle-kit generate",
+    "migrate:up": "bun run db/migrate.ts",
+    "migrate": "bun run migrate:generate && bun run migrate:up",
+    "seed:testnet": "bun run db/seed-testnet.ts",
+    "seed:mainnet": "bun run db/seed-mainnet.ts",
+    "db:postprocess:testnet": "bun run db/postprocess-testnet.ts",
+    "db:postprocess:mainnet": "bun run db/postprocess-mainnet.ts",
+    "start:testnet": "bun run migrate:up && bun run seed:testnet && bun run db:postprocess:testnet && bun run index.ts",
+    "start:mainnet": "bun run migrate:up && bun run seed:mainnet && bun run db:postprocess:mainnet && bun run index.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@electric-sql/pglite": "^0.3.7",
+    "bun-types": "^1.2.12",
+    "dprint": "^0.49.1",
+    "drizzle-kit": "^0.31.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@date-fns/utc": "^2.1.1",
+    "@nimiq/utils": "^0.12.3",
+    "@sisou/nimiq-ts": "npm:@jsr/sisou__nimiq-ts",
+    "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.43.1",
+    "postgres": "^3.4.5"
+  },
+  "trustedDependencies": [
+    "@biomejs/biome",
+    "dprint",
+    "esbuild"
+  ]
 }
