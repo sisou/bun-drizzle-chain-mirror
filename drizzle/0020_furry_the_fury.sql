@@ -1,0 +1,1 @@
+ALTER TABLE "inherents" ADD COLUMN "target_address" text;

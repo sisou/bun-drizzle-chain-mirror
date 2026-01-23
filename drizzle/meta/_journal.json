@@ -141,6 +141,13 @@
       "when": 1756849975930,
       "tag": "0019_lame_the_twelve",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1769156061341,
+      "tag": "0020_furry_the_fury",
+      "breakpoints": true
     }
   ]
 }

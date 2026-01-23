@@ -213,6 +213,7 @@ export const inherents = pgTable("inherents", {
 	block_height: integer("block_height").notNull().references(() => blocks.height, { onDelete: "cascade" }),
 	date: timestamp("timestamp_ms", { mode: "date", precision: 3 }).notNull(),
 	validator_address: text("validator_address").notNull(), // .references(() => validators.address, { onDelete: "cascade" })
+	target_address: text("target_address"),
 	data: jsonb("data"),
 }, (table) => [
 	index("inherent_type_idx").on(table.type),

@@ -47,13 +47,14 @@ function toTransactionInsert(tx: Transaction): TransactionInsert {
 }
 
 function toInherentInsert(inh: Inherent): InherentInsert {
-	const { blockTime, blockNumber, type, validatorAddress, ...data } = inh;
+	const { blockTime, blockNumber, type, validatorAddress, target, ...data } = inh;
 
 	return {
 		date: new Date(blockTime),
 		block_height: blockNumber,
 		type: type,
 		validator_address: validatorAddress,
+		target_address: target,
 		data,
 	};
 }

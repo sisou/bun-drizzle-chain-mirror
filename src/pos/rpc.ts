@@ -119,13 +119,13 @@ type RewardInherent = BaseInherent & {
 
 type PenalizeInherent = BaseInherent & {
 	type: "penalize";
-	validatorAddress: string;
+	target: undefined;
 	offenseEventBlock: number;
 };
 
 type JailInherent = BaseInherent & {
 	type: "jail";
-	validatorAddress: string;
+	target: undefined;
 	offenseEventBlock: number;
 };
 
