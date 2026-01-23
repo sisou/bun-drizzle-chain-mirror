@@ -1,0 +1,1 @@
+DROP INDEX "inherent_target_address_idx";

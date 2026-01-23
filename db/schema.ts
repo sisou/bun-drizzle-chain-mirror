@@ -220,7 +220,7 @@ export const inherents = pgTable("inherents", {
 	index("inherent_block_height_idx").on(table.block_height),
 	// index("inherent_date_idx").on(table.date),
 	index("inherent_validator_address_idx").on(table.validator_address),
-	index("inherent_target_address_idx").on(table.target_address),
+	// index("inherent_target_address_idx").on(table.target_address),
 ]);
 export type Inherent = typeof inherents.$inferSelect;
 export type InherentInsert = typeof inherents.$inferInsert;
