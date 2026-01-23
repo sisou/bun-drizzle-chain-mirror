@@ -233,7 +233,7 @@ export async function writeBlocks(
 		}
 
 		console.log(
-			`For block #${i}, generated 1 block, ${txEntries.length} transactions, ${accountEntries.size} accounts`,
+			`For block #${i}, generated 1 block, ${txEntries.length} transactions, ${accountEntries.size} accounts, ${inhEntries.length} inherents`,
 		);
 
 		await db.transaction(async (trx) => {
