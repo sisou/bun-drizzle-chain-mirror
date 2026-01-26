@@ -294,7 +294,7 @@ export async function writeBlocks(
 			}
 		});
 
-		await extractRewardInherentTargetAddress();
+		// await extractRewardInherentTargetAddress();
 	}
 }
 
