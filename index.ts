@@ -212,8 +212,8 @@ async function computeRestakeTransactions() {
 	if (!result.count) {
 		// Insert a dummy entry to mark that this timeframe has been computed
 		await db.insert(restakeTransactionsGrouped).values({
-			staker_address: "NQ000 0000 0000 0000 0000 0000 0000 0000 0000",
-			sender_address: "NQ000 0000 0000 0000 0000 0000 0000 0000 0000",
+			staker_address: "NQ07 0000 0000 0000 0000 0000 0000 0000 0000",
+			sender_address: "NQ07 0000 0000 0000 0000 0000 0000 0000 0000",
 			time_window: fromTime,
 			aggregated_value: 0,
 		});
