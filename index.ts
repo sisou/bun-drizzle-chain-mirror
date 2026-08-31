@@ -194,6 +194,8 @@ async function computeRestakeTransactions() {
 		.where(and(
 			eq(transactions.recipient_address, "NQ77 0000 0000 0000 0000 0000 0000 0000 0001"),
 			sql`get_byte(${transactions.recipient_data}, 0) = 6`,
+			// Failed restakes never moved any value
+			eq(transactions.executed, true),
 			isNotNull(transactions.date),
 			isNotNull(sql`${transactions.related_addresses}[1]`),
 			gte(transactions.date, fromTime),

@@ -26,7 +26,11 @@ import {
 	type Transaction,
 } from "./pos/rpc";
 
-function toTransactionInsert(tx: Transaction): TransactionInsert {
+/**
+ * `executed` is passed in explicitly rather than read off `tx`, because mempool transactions share this shape but
+ * have no execution result yet. Omitting it falls back to the column default (`true`), which the block write corrects.
+ */
+function toTransactionInsert(tx: Transaction, executed?: boolean): TransactionInsert {
 	return {
 		date: tx.timestamp ? new Date(tx.timestamp) : undefined,
 		hash: tx.hash,
@@ -43,6 +47,7 @@ function toTransactionInsert(tx: Transaction): TransactionInsert {
 		flags: tx.flags,
 		validity_start_height: tx.validityStartHeight,
 		related_addresses: tx.relatedAddresses?.filter(address => address !== tx.to && address !== tx.from) || [],
+		executed,
 	};
 }
 
@@ -143,34 +148,44 @@ export async function writeBlocks(
 			? []
 			: blockTransactions
 				.filter((tx) => isMainnet || tx.value >= 10)
-				.map((tx) => toTransactionInsert(tx));
+				.map((tx) => toTransactionInsert(tx, tx.executionResult));
 		const inhEntries: InherentInsert[] = blockInherents.map((inherent) => toInherentInsert(inherent));
 
 		for (const tx of blockTransactions) {
+			// Merge into any existing entry, so that an address touched as both sender and recipient within the same
+			// block does not have one side's last_sent/last_received overwritten with undefined by the other.
+			const senderEntry = accountEntries.get(tx.from);
 			accountEntries.set(tx.from, {
 				address: tx.from,
 				type: tx.fromType,
 				balance: 0,
-				first_seen: i,
+				first_seen: senderEntry?.first_seen ?? i,
 				last_sent: i,
-				last_received: undefined,
-			});
-			accountEntries.set(tx.to, {
-				address: tx.to,
-				type: tx.toType,
-				balance: 0,
-				first_seen: i,
-				last_sent: undefined,
-				last_received: i,
+				last_received: senderEntry?.last_received,
 			});
 
-			// Store vesting contract owners
-			if (tx.toType === Account.Type.VESTING && tx.recipientData) {
-				const owner = Address.fromHex(tx.recipientData.substring(0, 40)).toUserFriendlyAddress();
-				vestingOwnerEntries.set(tx.to, {
+			// A failed transaction only deducts the fee from the sender. The recipient is left untouched, and the
+			// recipient type claimed by the transaction was never validated, so writing it would clobber the real
+			// account type (e.g. downgrading an HTLC to BASIC). Skip the recipient entirely.
+			if (tx.executionResult) {
+				const recipientEntry = accountEntries.get(tx.to);
+				accountEntries.set(tx.to, {
 					address: tx.to,
-					owner,
+					type: tx.toType,
+					balance: 0,
+					first_seen: recipientEntry?.first_seen ?? i,
+					last_sent: recipientEntry?.last_sent,
+					last_received: i,
 				});
+
+				// Store vesting contract owners
+				if (tx.toType === Account.Type.VESTING && tx.recipientData) {
+					const owner = Address.fromHex(tx.recipientData.substring(0, 40)).toUserFriendlyAddress();
+					vestingOwnerEntries.set(tx.to, {
+						address: tx.to,
+						owner,
+					});
+				}
 			}
 
 			options?.mempool?.delete(tx.hash);
@@ -214,7 +229,11 @@ export async function writeBlocks(
 					if (!entry.last_received) {
 						const [lastReceived, lastMined] = await Promise.all([
 							db.select({ block_height: transactions.block_height }).from(transactions).where(
-								eq(transactions.recipient_address, entry.address),
+								and(
+									eq(transactions.recipient_address, entry.address),
+									// A failed transaction never credited the recipient
+									eq(transactions.executed, true),
+								),
 							).orderBy(desc(transactions.block_height)).limit(1).then(res => res.at(0)?.block_height),
 							db.select({ height: blocks.height }).from(blocks).where(eq(blocks.creator_address, address)).orderBy(
 								desc(blocks.height),
@@ -284,6 +303,9 @@ export async function writeBlocks(
 						),
 						date: sql.raw(`COALESCE(EXCLUDED.${transactions.date.name}, ${tableName}.${transactions.date.name})`),
 						proof: sql.raw(`COALESCE(EXCLUDED.${transactions.proof.name}, ${tableName}.${transactions.proof.name})`),
+						// Deliberately not COALESCEd: a `false` from the block must overwrite the `true` that the
+						// mempool row defaulted to.
+						executed: sql.raw(`EXCLUDED.${transactions.executed.name}`),
 					},
 				});
 			}

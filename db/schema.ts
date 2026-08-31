@@ -177,6 +177,11 @@ export const transactions = pgTable("transactions", {
 	flags: smallint("flags").notNull(),
 	proof: bytea("proof"),
 	related_addresses: text("related_addresses").array().notNull(), // TODO: Go through PoW transactions and check for related addresses, e.g. signer !== sender
+	/**
+	 * Whether the transaction's execution succeeded. Transactions can be included in a block but fail to execute,
+	 * in which case only their fee is deducted. Mempool transactions default to `true` until their block is written.
+	 */
+	executed: boolean("executed").notNull().default(true),
 }, (table) => [
 	index("block_height_idx").on(table.block_height),
 	index("date_idx").on(table.date),
