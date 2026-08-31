@@ -8,10 +8,8 @@ import { type Account as RpcAccount, getAccount, getTransactionsByBlockNumber } 
 /**
  * The last block that was written before the writer started recording execution results. Everything above it is
  * written correctly and does not need to be rescanned.
- *
- * TODO: Fill in the mainnet block. Until then the rescan does nothing on mainnet.
  */
-const RESCAN_TO_BLOCK = isMainnet ? null : 10_206_255;
+const RESCAN_TO_BLOCK = isMainnet ? 60_368_968 : 10_206_255;
 
 /** How many blocks to fetch from the RPC server per batch. */
 const BATCH_BLOCKS = 50;
@@ -81,8 +79,6 @@ async function repairRecipientTypes(addresses: Set<string>) {
  * failed ones accordingly. Returns false once there is nothing left to rescan.
  */
 export async function rescanExecutionResults(): Promise<boolean> {
-	if (RESCAN_TO_BLOCK === null) return false;
-
 	if (cursor === undefined) {
 		cursor = await findStartBlock(RESCAN_TO_BLOCK);
 		console.log(`Rescanning execution results from #${cursor} to #${RESCAN_TO_BLOCK}`);

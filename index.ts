@@ -246,7 +246,7 @@ async function rescan() {
 	// Run rescan batches for 5s
 	const startTime = Date.now();
 	while (Date.now() - startTime < 5e3) {
-		// Stop rescheduling once the rescan is done, or while this network has no rescan range yet
+		// Stop rescheduling once the rescan is done
 		if (!(await rescanExecutionResults())) return;
 	}
 
