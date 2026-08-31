@@ -5,6 +5,7 @@ import { blocks, restakeTransactionsGrouped, transactions } from "./db/schema";
 import { db } from "./src/database";
 import { isMainnet } from "./src/lib/pos";
 import { getBlockByNumber, getBlockNumber, mempoolContent } from "./src/pos/rpc";
+import { rescanExecutionResults } from "./src/rescan-executed";
 import { writeBlocks, writeMempoolTransactions } from "./src/writer";
 
 // Step 1: Catch up to the chain
@@ -239,3 +240,19 @@ async function compute() {
 // Kick off computing
 console.log("Computing aggregated tables...");
 compute();
+
+// Rescan transactions that were written before the writer recorded execution results
+async function rescan() {
+	// Run rescan batches for 5s
+	const startTime = Date.now();
+	while (Date.now() - startTime < 5e3) {
+		// Stop rescheduling once the rescan is done, or while this network has no rescan range yet
+		if (!(await rescanExecutionResults())) return;
+	}
+
+	// Call itself again after 1s
+	setTimeout(rescan, 1e3);
+}
+
+// Kick off rescanning
+rescan();
