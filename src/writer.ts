@@ -354,6 +354,7 @@ async function extractRewardInherentTargetAddress() {
 	for (const inh of dbInherents) {
 		const data = inh.data as { target?: string };
 		const target_address = data.target;
+		// biome-ignore lint/performance/noDelete: the target moves into its own column and must not stay in the blob
 		delete data.target;
 
 		await db.update(inherents)
