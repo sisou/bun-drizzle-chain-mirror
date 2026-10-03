@@ -169,6 +169,13 @@
       "when": 1788185674752,
       "tag": "0023_curious_silver_fox",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791015276022,
+      "tag": "0024_amusing_tigra",
+      "breakpoints": true
     }
   ]
 }

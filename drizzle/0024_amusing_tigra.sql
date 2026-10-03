@@ -1,0 +1,1 @@
+CREATE INDEX "inherent_target_address_idx" ON "inherents" USING btree ("target_address");
