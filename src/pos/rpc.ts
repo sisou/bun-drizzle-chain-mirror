@@ -261,14 +261,6 @@ async function getSocket(url: string) {
 	});
 }
 
-/**
- * Closes all open websocket connections, which would otherwise keep the process alive.
- */
-export function closeSockets() {
-	for (const socket of sockets.values()) socket.close();
-	sockets.clear();
-}
-
 type RpcResponse<Type> =
 	& {
 		jsonrpc: "2.0";
