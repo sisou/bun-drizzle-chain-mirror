@@ -147,7 +147,7 @@ export async function writeBlocks(
 		const txEntries: TransactionInsert[] = isMacroBlock
 			? []
 			: blockTransactions
-				.filter((tx) => isMainnet || tx.value >= 10)
+				.filter((tx) => isMainnet || tx.value >= 10 || tx.value === 0) // Filter out low-luna spam in testnet, but keep signalling txs
 				.map((tx) => toTransactionInsert(tx, tx.executionResult));
 		const inhEntries: InherentInsert[] = blockInherents.map((inherent) => toInherentInsert(inherent));
 
