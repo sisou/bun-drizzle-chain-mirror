@@ -30,7 +30,7 @@ import {
  * `executed` is passed in explicitly rather than read off `tx`, because mempool transactions share this shape but
  * have no execution result yet. Omitting it falls back to the column default (`true`), which the block write corrects.
  */
-function toTransactionInsert(tx: Transaction, executed?: boolean): TransactionInsert {
+export function toTransactionInsert(tx: Transaction, executed?: boolean): TransactionInsert {
 	return {
 		date: tx.timestamp ? new Date(tx.timestamp) : undefined,
 		hash: tx.hash,
