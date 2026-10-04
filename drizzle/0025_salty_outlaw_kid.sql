@@ -1,0 +1,1 @@
+CREATE INDEX "creator_address_height_idx" ON "blocks" USING btree ("creator_address","height");

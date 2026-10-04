@@ -66,6 +66,7 @@ export const blocks = pgTable("blocks", {
 }, (table) => [
 	uniqueIndex("block_hash_idx").on(table.hash),
 	index("creator_address_idx").on(table.creator_address),
+	index("creator_address_height_idx").on(table.creator_address, table.height),
 ]);
 export type Block = typeof blocks.$inferSelect;
 export type BlockInsert = typeof blocks.$inferInsert;
