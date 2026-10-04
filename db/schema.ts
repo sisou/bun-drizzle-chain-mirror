@@ -65,7 +65,6 @@ export const blocks = pgTable("blocks", {
 	extra_data: bytea("extra_data"),
 }, (table) => [
 	uniqueIndex("block_hash_idx").on(table.hash),
-	index("creator_address_idx").on(table.creator_address),
 	index("creator_address_height_idx").on(table.creator_address, table.height),
 ]);
 export type Block = typeof blocks.$inferSelect;

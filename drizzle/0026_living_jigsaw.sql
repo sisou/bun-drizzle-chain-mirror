@@ -1,0 +1,1 @@
+DROP INDEX "creator_address_idx";
