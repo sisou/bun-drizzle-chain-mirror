@@ -185,8 +185,6 @@ export const transactions = pgTable("transactions", {
 }, (table) => [
 	index("block_height_idx").on(table.block_height),
 	index("date_idx").on(table.date),
-	index("sender_address_idx").on(table.sender_address),
-	index("recipient_address_idx").on(table.recipient_address),
 	index("sender_address_height_idx").on(table.sender_address, table.block_height),
 	index("recipient_address_height_idx").on(table.recipient_address, table.block_height),
 	index("failed_block_height_idx").on(table.block_height).where(sql`NOT ${table.executed}`),
