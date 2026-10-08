@@ -257,6 +257,7 @@ export async function writeBlocks(
 
 		await db.transaction(async (trx) => {
 			await trx.insert(blocks).values(blockEntry);
+
 			if (epochEntry) await trx.insert(epochs).values(epochEntry);
 
 			if (accountEntries.size) {

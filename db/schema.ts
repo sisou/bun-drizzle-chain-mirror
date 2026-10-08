@@ -66,6 +66,7 @@ export const blocks = pgTable("blocks", {
 }, (table) => [
 	uniqueIndex("block_hash_idx").on(table.hash),
 	index("creator_address_height_idx").on(table.creator_address, table.height),
+	index("block_date_idx").on(table.date),
 ]);
 export type Block = typeof blocks.$inferSelect;
 export type BlockInsert = typeof blocks.$inferInsert;
@@ -89,7 +90,6 @@ export const epochs = pgTable("epochs", {
 }, (table) => [
 	index("epoch_block_height_idx").on(table.block_height),
 	// index("epoch_block_date_idx").on(table.block_date),
-	index("epoch_elected_validators_idx").on(table.elected_validators),
 ]);
 export type Epoch = typeof epochs.$inferSelect;
 export type EpochInsert = typeof epochs.$inferInsert;
@@ -144,7 +144,6 @@ export const vestingOwners = pgTable("vesting_owners", {
 	address: text("address").primaryKey().references(() => accounts.address, { onDelete: "cascade" }),
 	owner: text("owner").notNull(),
 }, (table) => [
-	index("address_idx").on(table.address),
 	index("owner_idx").on(table.owner),
 ]);
 export type VestingOwner = typeof vestingOwners.$inferSelect;
@@ -188,6 +187,13 @@ export const transactions = pgTable("transactions", {
 	index("sender_address_height_idx").on(table.sender_address, table.block_height),
 	index("recipient_address_height_idx").on(table.recipient_address, table.block_height),
 	index("failed_block_height_idx").on(table.block_height).where(sql`NOT ${table.executed}`),
+	// An account's staking transactions (account type 3 is the staking contract)
+	index("sender_address_to_staking_height_idx").on(table.sender_address, table.block_height).where(
+		sql`${table.recipient_type} = 3`,
+	),
+	index("recipient_address_from_staking_height_idx").on(table.recipient_address, table.block_height).where(
+		sql`${table.sender_type} = 3`,
+	),
 ]);
 export type Transaction = typeof transactions.$inferSelect;
 export type TransactionInsert = typeof transactions.$inferInsert;
@@ -222,7 +228,7 @@ export const inherents = pgTable("inherents", {
 	target_address: text("target_address"),
 	data: jsonb("data"),
 }, (table) => [
-	index("inherent_type_idx").on(table.type),
+	index("inherent_type_height_idx").on(table.type, table.block_height),
 	index("inherent_block_height_idx").on(table.block_height),
 	// index("inherent_date_idx").on(table.date),
 	index("inherent_validator_address_idx").on(table.validator_address),
@@ -336,7 +342,6 @@ export const prestakers = pgTable("prestakers", {
 		onDelete: "set null",
 	}),
 }, (table) => [
-	index("delegation_idx").on(table.delegation),
 	index("first_transaction_height_idx").on(table.first_transaction_height),
 	index("latest_transaction_height_idx").on(table.latest_transaction_height),
 ]);
@@ -360,9 +365,7 @@ export const prestakingTransactions = pgTable("prestaking_transactions", {
 	}),
 	validator_stake_ratio: real("validator_stake_ratio").notNull(),
 	is_underdog_pool: boolean("is_underdog_pool"),
-}, (table) => [
-	index("staker_address_idx").on(table.staker_address),
-]);
+});
 export type PrestakingTransaction = typeof prestakingTransactions.$inferSelect;
 export type PrestakingTransactionInsert = typeof prestakingTransactions.$inferInsert;
 
