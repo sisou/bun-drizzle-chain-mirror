@@ -89,7 +89,6 @@ export const epochs = pgTable("epochs", {
 	votes: integer("votes").notNull(),
 }, (table) => [
 	index("epoch_block_height_idx").on(table.block_height),
-	// index("epoch_block_date_idx").on(table.block_date),
 ]);
 export type Epoch = typeof epochs.$inferSelect;
 export type EpochInsert = typeof epochs.$inferInsert;
@@ -230,7 +229,6 @@ export const inherents = pgTable("inherents", {
 }, (table) => [
 	index("inherent_type_height_idx").on(table.type, table.block_height),
 	index("inherent_block_height_idx").on(table.block_height),
-	// index("inherent_date_idx").on(table.date),
 	index("inherent_validator_address_idx").on(table.validator_address),
 	index("inherent_target_address_height_idx").on(table.target_address, table.block_height),
 ]);
@@ -265,6 +263,7 @@ export const restakeTransactionsGrouped = pgTable("restake_transactions_grouped"
 	// Indices with INCLUDE columns are not yet supported by Drizzle's schema builder (https://github.com/drizzle-team/drizzle-orm/issues/2972),
 	// thus I added that clause manually in the migration SQL file (0019_lame_the_twelve.sql).
 	index("staker_time_idx").on(table.staker_address, table.time_window),
+	index("restake_time_window_idx").on(table.time_window),
 ]);
 export type RestakeTransactionGroup = typeof restakeTransactionsGrouped.$inferSelect;
 
@@ -342,6 +341,7 @@ export const prestakers = pgTable("prestakers", {
 		onDelete: "set null",
 	}),
 }, (table) => [
+	index("delegation_idx").on(table.delegation),
 	index("first_transaction_height_idx").on(table.first_transaction_height),
 	index("latest_transaction_height_idx").on(table.latest_transaction_height),
 ]);
@@ -365,7 +365,9 @@ export const prestakingTransactions = pgTable("prestaking_transactions", {
 	}),
 	validator_stake_ratio: real("validator_stake_ratio").notNull(),
 	is_underdog_pool: boolean("is_underdog_pool"),
-});
+}, (table) => [
+	index("staker_address_idx").on(table.staker_address),
+]);
 export type PrestakingTransaction = typeof prestakingTransactions.$inferSelect;
 export type PrestakingTransactionInsert = typeof prestakingTransactions.$inferInsert;
 
