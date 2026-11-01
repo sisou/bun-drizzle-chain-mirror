@@ -225,6 +225,13 @@
       "when": 1791460756783,
       "tag": "0031_certain_mongu",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793538347741,
+      "tag": "0032_lumpy_hercules",
+      "breakpoints": true
     }
   ]
 }

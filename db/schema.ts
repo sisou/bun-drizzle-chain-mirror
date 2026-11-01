@@ -193,6 +193,12 @@ export const transactions = pgTable("transactions", {
 	index("recipient_address_from_staking_height_idx").on(table.recipient_address, table.block_height).where(
 		sql`${table.sender_type} = 3`,
 	),
+	// Deactivate validator, reactivate validator and set signal data (first data byte 2, 3, 10): the instructions signed
+	// with a validator's signing key, which they name only in `related_addresses`. `substring` (not `get_byte`): it
+	// never fails, whatever the data
+	index("signing_key_related_addresses_idx").using("gin", table.related_addresses).where(
+		sql`${table.recipient_type} = 3 AND substring(${table.recipient_data}, 1, 1) IN ('\\x02', '\\x03', '\\x0a')`,
+	),
 ]);
 export type Transaction = typeof transactions.$inferSelect;
 export type TransactionInsert = typeof transactions.$inferInsert;

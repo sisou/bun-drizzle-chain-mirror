@@ -1,0 +1,1 @@
+CREATE INDEX "signing_key_related_addresses_idx" ON "transactions" USING gin ("related_addresses") WHERE "transactions"."recipient_type" = 3 AND substring("transactions"."recipient_data", 1, 1) IN ('\x02', '\x03', '\x0a');
