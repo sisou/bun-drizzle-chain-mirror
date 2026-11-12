@@ -28,23 +28,23 @@ while (currentHeight >= TRANSITION_BLOCK) {
 	currentHeight--;
 }
 
-async function updateBlock(number: number) {
-	const block = await getBlockByNumber(currentHeight, false);
+async function updateBlock(height: number) {
+	const block = await getBlockByNumber(height, false);
 	if (!block) {
-		console.log(`Block ${currentHeight} not found`);
+		console.log(`Block ${height} not found`);
 		return true;
 	}
 
 	if (block.type === "macro") {
-		console.log(`Block ${currentHeight} is a macro block`);
+		console.log(`Block ${height} is a macro block`);
 		return false;
 	}
 
 	await db.update(blocks).set({ creator_address: block.producer.validator }).where(
-		eq(blocks.height, currentHeight),
+		eq(blocks.height, height),
 	);
 
-	console.log(`Block ${currentHeight} updated`);
+	console.log(`Block ${height} updated`);
 
 	return false;
 }
