@@ -15,23 +15,23 @@
     "start:testnet": "bun run migrate:up && bun run seed:testnet && bun run db:postprocess:testnet && bun run index.ts",
     "start:mainnet": "bun run migrate:up && bun run seed:mainnet && bun run db:postprocess:mainnet && bun run index.ts"
   },
-  "devDependencies": {
-    "@biomejs/biome": "1.9.4",
-    "@electric-sql/pglite": "^0.3.16",
-    "bun-types": "^1.4.2",
-    "dprint": "^0.49.1",
-    "drizzle-kit": "^0.31.11"
-  },
-  "peerDependencies": {
-    "typescript": "^5.8.3"
-  },
   "dependencies": {
     "@date-fns/utc": "^2.1.1",
     "@nimiq/utils": "^0.12.4",
     "@sisou/nimiq-ts": "npm:@jsr/sisou__nimiq-ts",
     "date-fns": "^4.4.0",
-    "drizzle-orm": "^0.43.1",
-    "postgres": "^3.4.9"
+    "drizzle-orm": "^0.45.4",
+    "postgres": "^4.1.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.7",
+    "@electric-sql/pglite": "^0.5.16",
+    "bun-types": "^1.4.4",
+    "dprint": "^0.64.3",
+    "drizzle-kit": "^0.31.11"
+  },
+  "peerDependencies": {
+    "typescript": "^6.0.3"
   },
   "trustedDependencies": [
     "@biomejs/biome",

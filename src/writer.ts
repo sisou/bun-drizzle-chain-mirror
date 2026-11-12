@@ -1,5 +1,5 @@
 import { Account, Address } from "@sisou/nimiq-ts";
-import { and, desc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
 	type AccountInsert,
